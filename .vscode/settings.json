@@ -11,5 +11,14 @@
     "idf.flashType": "UART",
     "idf.customExtraVars": {
         "IDF_TARGET": "esp32s3"
+    },
+    "files.associations": {
+        "*.cjson": "jsonc",
+        "*.wxss": "css",
+        "*.wxs": "javascript",
+        "gpio.h": "c",
+        "esp_log.h": "c",
+        "led_strip.h": "c",
+        "led.h": "c"
     }
 }
