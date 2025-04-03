@@ -6,6 +6,7 @@
 #include "driver/gpio.h"
 #include "key.h"
 
+uint32_t color_num = 0;
 void app_main(void)
 {
     key_init();
@@ -13,10 +14,11 @@ void app_main(void)
     while (1)
     {
 
-        WS2812_blink(12, 12, 0);
+        WS2812_blink(12, color_num, 0);
 
         if (scan_keyval() == 1)
         {
+            color_num = 12;
             printf("key pressed\n");
         }
     }
