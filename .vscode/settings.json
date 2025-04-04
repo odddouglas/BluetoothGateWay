@@ -24,6 +24,7 @@
         "memory_resource": "cpp",
         "string": "cpp",
         "protocol_examples_common.h": "c",
-        "mqtt_client.h": "c"
+        "mqtt_client.h": "c",
+        "string_view": "cpp"
     }
 }
