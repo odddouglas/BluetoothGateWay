@@ -29,6 +29,7 @@ static led_strip_handle_t led_strip;
 // 上报属性的主题宏定义
 #define TOPIC_PROPERTIES_REPORT "$oc/devices/%s/sys/properties/report"
 
+
 static void publish_sensor_data(esp_mqtt_client_handle_t client,
                                 float temp, float humi, bool led)
 {
