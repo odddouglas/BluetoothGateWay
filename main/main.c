@@ -7,15 +7,19 @@
 #include "esp_netif.h"
 #include "esp_log.h"
 #include "mqtt_client.h"
+#include "esp_wifi.h"
 #include "protocol_examples_common.h"
 
 #define TAG "HUAWEI_MQTT"
+#define WIFI_SSID "odddouglas"     // 修改为你想连接的 Wi-Fi SSID
+#define WIFI_PASSWORD "odddouglas" // 修改为 Wi-Fi 密码
+
 #define DEVICE_ID "67ed58015367f573f77ef961_esp32"
 #define DEVICE_SECRET "1dd8ae3b5de51602871d8039dabf6f9e"
 #define CLIENT_ID "67ed58015367f573f77ef961_esp32_0_0_2025040406"
 #define CLIENT_SECRET "70bc70ecf2946cdbeb8a4585367b13f40122000155517925bbcab2ee92d01d3d"
 
-#define BROKER_URI "mqtts://e5e7404266.st1.iotda-device.cn-north-4.myhuaweicloud.com:8883"
+#define BROKER_URI "mqtt://e5e7404266.st1.iotda-device.cn-north-4.myhuaweicloud.com:1883"
 
 // 上报属性的主题宏定义
 #define TOPIC_PROPERTIES_REPORT "$oc/devices/%s/sys/properties/report"
@@ -87,6 +91,38 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
     }
 }
 
+void wifi_init(void)
+{
+    // 初始化 Wi-Fi 配置结构体
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
+    // 初始化 Wi-Fi 驱动
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = WIFI_SSID,
+            .password = WIFI_PASSWORD,
+        },
+    };
+
+    ESP_LOGI(TAG, "Setting WiFi configuration SSID %s password %s", WIFI_SSID, WIFI_PASSWORD);
+
+    // 设置 Wi-Fi 模式为 Station 模式
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+
+    // 设置 Wi-Fi 配置
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+
+    // 启动 Wi-Fi
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    // 等待 Wi-Fi 连接
+    ESP_LOGI(TAG, "Attempting to connect to Wi-Fi...");
+
+    ESP_ERROR_CHECK(esp_wifi_connect());
+}
+
 void app_main()
 {
     // 初始化基础组件
@@ -95,7 +131,8 @@ void app_main()
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     // 连接WiFi
-    ESP_ERROR_CHECK(example_connect());
+    wifi_init();
+    // ESP_ERROR_CHECK(example_connect());
 
     // 配置MQTT客户端（非加密）
     esp_mqtt_client_config_t mqtt_cfg = {

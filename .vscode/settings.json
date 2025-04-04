@@ -23,6 +23,7 @@
         "led_strip_interface.h": "c",
         "memory_resource": "cpp",
         "string": "cpp",
-        "protocol_examples_common.h": "c"
+        "protocol_examples_common.h": "c",
+        "mqtt_client.h": "c"
     }
 }
