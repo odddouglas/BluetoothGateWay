@@ -10,18 +10,18 @@ if(NOT EXISTS "E:/ODDDOUGLAS/maxi-file/esp32/ESP-IDF/esp/v5.3.2/esp-idf/componen
   file(MAKE_DIRECTORY "E:/ODDDOUGLAS/maxi-file/esp32/ESP-IDF/esp/v5.3.2/esp-idf/components/bootloader/subproject")
 endif()
 file(MAKE_DIRECTORY
-  "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader"
-  "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader-prefix"
-  "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader-prefix/tmp"
-  "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader-prefix/src/bootloader-stamp"
-  "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader-prefix/src"
-  "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader-prefix/src/bootloader-stamp"
+  "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader"
+  "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader-prefix"
+  "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader-prefix/tmp"
+  "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader-prefix/src/bootloader-stamp"
+  "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader-prefix/src"
+  "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader-prefix/src/bootloader-stamp"
 )
 
 set(configSubDirs )
 foreach(subDir IN LISTS configSubDirs)
-    file(MAKE_DIRECTORY "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
+    file(MAKE_DIRECTORY "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader-prefix/src/bootloader-stamp/${subDir}")
 endforeach()
 if(cfgdir)
-  file(MAKE_DIRECTORY "E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
+  file(MAKE_DIRECTORY "E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/bootloader-prefix/src/bootloader-stamp${cfgdir}") # cfgdir has leading slash
 endif()

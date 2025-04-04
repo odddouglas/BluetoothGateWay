@@ -39,11 +39,11 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/esp-idf/esp_hw_support/port/esp32s3/cmake_install.cmake")
+  include("E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/esp-idf/esp_hw_support/port/esp32s3/cmake_install.cmake")
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for the subdirectory.
-  include("E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/esp-idf/esp_hw_support/lowpower/cmake_install.cmake")
+  include("E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/esp-idf/esp_hw_support/lowpower/cmake_install.cmake")
 endif()
 

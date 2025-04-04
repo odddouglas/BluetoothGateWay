@@ -1,4 +1,4 @@
-# Install script for directory: E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/main
+# Install script for directory: E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/main
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

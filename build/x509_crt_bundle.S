@@ -1,4 +1,4 @@
-/* * Data converted from E:/ODDDOUGLAS/maxi-file/esp32/project/idf/custom_outbox/build/esp-idf/mbedtls/x509_crt_bundle
+/* * Data converted from E:/ODDDOUGLAS/mini-project/project/smarthost-gateway/build/esp-idf/mbedtls/x509_crt_bundle
  */
 .data
 #if !defined (__APPLE__) && !defined (__linux__)

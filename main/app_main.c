@@ -8,8 +8,17 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 #include "protocol_examples_common.h"
+#include "key.h"
+#include "led.h"
+#include "led_strip.h"
 
 #define TAG "HUAWEI_MQTT"
+
+#define LED_GPIO 48 // LED 数据线连接的 GPIO
+#define LED_NUM 1   // LED 灯带上的 LED 数量
+
+static led_strip_handle_t led_strip;
+
 #define DEVICE_ID "67ed58015367f573f77ef961_esp32"
 #define DEVICE_SECRET "1dd8ae3b5de51602871d8039dabf6f9e"
 #define CLIENT_ID "67ed58015367f573f77ef961_esp32_0_0_2025040406"
@@ -53,7 +62,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
     {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "Connected to Huawei IoT Platform");
-
+        
         publish_sensor_data(event->client, 22.5, 100.0, true);
         break;
 
@@ -89,6 +98,20 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base,
 
 void app_main()
 {
+    // LED 配置
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = LED_GPIO,
+        .max_leds = LED_NUM,
+    };
+
+    // RMT 配置
+    led_strip_rmt_config_t rmt_config = {
+        .resolution_hz = 10 * 1000 * 1000, // 10 MHz
+        .flags.with_dma = false,
+    };
+    // 初始化 LED 灯带
+    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+
     // 初始化基础组件
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
@@ -115,6 +138,11 @@ void app_main()
     int counter = 0;
     while (1)
     {
+        // 设置红色
+        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 255, 0, 0)); // 红色 (255, 0, 0)
+        ESP_ERROR_CHECK(led_strip_refresh(led_strip));
+        ESP_LOGI(TAG, "LED ON");
+        
         vTaskDelay(10000 / portTICK_PERIOD_MS);
 
         // 生成模拟数据

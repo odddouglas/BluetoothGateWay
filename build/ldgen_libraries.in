@@ -83,3 +83,6 @@ $<TARGET_FILE:__idf_usb>
 $<TARGET_FILE:__idf_wifi_provisioning>
 $<TARGET_FILE:__idf_protocol_examples_common>
 $<TARGET_FILE:__idf_main>
+$<TARGET_FILE:__idf_LED>
+$<TARGET_FILE:__idf_KEY>
+$<TARGET_FILE:__idf_WS2812>

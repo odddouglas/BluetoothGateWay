@@ -24,6 +24,7 @@
         "string.h": "c",
         "esp_system.h": "c",
         "stddef.h": "c",
-        "esp_sntp.h": "c"
+        "esp_sntp.h": "c",
+        "led_strip.h": "c"
     }
 }
