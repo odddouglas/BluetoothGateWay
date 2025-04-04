@@ -20,6 +20,9 @@
         "esp_log.h": "c",
         "led_strip.h": "c",
         "led.h": "c",
-        "led_strip_interface.h": "c"
+        "led_strip_interface.h": "c",
+        "memory_resource": "cpp",
+        "string": "cpp",
+        "protocol_examples_common.h": "c"
     }
 }
