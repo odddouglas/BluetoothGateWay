@@ -8,7 +8,6 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 #include "esp_wifi.h"
-#include "protocol_examples_common.h"
 
 #define TAG "HUAWEI_MQTT"
 #define WIFI_SSID "odddouglas"     // 修改为你想连接的 Wi-Fi SSID

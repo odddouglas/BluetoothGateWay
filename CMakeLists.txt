@@ -12,7 +12,6 @@ list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/bsp/LED")
 list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/bsp/KEY")
 list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/bsp/WS2812")
 list(APPEND EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_LIST_DIR}/bsp/MQTT")
-set(EXTRA_COMPONENT_DIRS $ENV{IDF_PATH}/examples/common_components/protocol_examples_common)
 
 idf_component_get_property(mqtt mqtt COMPONENT_LIB)
 target_sources(${mqtt} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/bsp/MQTT/custom_outbox.cpp)
