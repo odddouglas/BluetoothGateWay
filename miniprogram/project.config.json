@@ -14,7 +14,7 @@
     "coverView": false,
     "postcss": false,
     "minified": false,
-    "enhance": false,
+    "enhance": true,
     "showShadowRootInWxmlPanel": false,
     "ignoreUploadUnusedFiles": true,
     "compileHotReLoad": false,
@@ -25,7 +25,8 @@
         "packageJsonPath": "miniprogram/package.json",
         "miniprogramNpmDistDir": "miniprogram/miniprogram_npm"
       }
-    ]
+    ],
+    "es6": true
   },
   "simulatorType": "wechat",
   "simulatorPluginLibVersion": {},
