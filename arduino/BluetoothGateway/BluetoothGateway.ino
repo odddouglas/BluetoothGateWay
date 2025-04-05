@@ -51,8 +51,7 @@ float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
 bool led_state = false; // LED 状态变量
 
-bool state = false; // 测试命令的
-String cmd = "";    // 命令
+String cmd = ""; // 命令
 long lastMsg = 0;
 
 // 搜索BLE设备回调
@@ -186,7 +185,6 @@ bool connectToServer()
     return true;
 }
 
-
 void BLE_Scan()
 {
     // 开始扫描设备
@@ -214,8 +212,6 @@ void BLE_Scan()
 // 发送命令到设备的函数
 void sendCommand()
 {
-    state = !state;
-    cmd = (state ? "ON" : "OFF"); // 更新命令
     if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
     {
         Serial.printf("向特征写入消息: %s\r\n", cmd.c_str());
@@ -342,8 +338,8 @@ void handleCommand(char *topic, byte *payload, unsigned int length)
 
     if (commandName == "ctrl") // 判断是否为控制命令
     {
-        //bool state = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
-        //cmd = (state ? "ON" : "OFF");            // 更新命令
+        bool state = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
+        cmd = (state ? "ON" : "OFF");            // 更新命令
         MQTT_Respond(String(topic), "success");  // 回复命令成功
     }
     else
@@ -381,6 +377,6 @@ void loop()
     if (isConnected && doSend)
     {
         sendCommand(); // 调用 sendCommand 函数发送命令
-        delay(3500);   // 控制发送间隔
+       
     }
 }
