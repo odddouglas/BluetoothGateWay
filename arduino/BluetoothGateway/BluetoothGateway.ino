@@ -40,7 +40,7 @@ BLECharacteristic *pCharacteristic;
 boolean doScan = true;       // 是否开始扫描设备
 boolean doConnect = false;   // 是否连接设备
 boolean isConnected = false; // 设备是否已连接
-boolean doSend = true;       // 是否发送命令
+boolean doSend = false;      // 是否发送命令
 
 BLEAdvertisedDevice *pServer = nullptr;                     // 存储找到的设备
 BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;   // 存储远程读取特征
@@ -131,7 +131,7 @@ void NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *
 }
 
 // 用来连接设备获取其中的服务与特征
-bool connectToServer()
+bool ConnectToServer()
 {
     pClient = BLEDevice::createClient(); // 创建客户端实例
     if (!pClient)
@@ -198,7 +198,7 @@ void BLE_Scan()
     // 如果找到设备就尝试一次连接
     if (doConnect)
     {
-        if (connectToServer())
+        if (ConnectToServer())
         {
             isConnected = true; // 设置连接状态为已连接
         }
@@ -216,7 +216,7 @@ void sendCommand()
     {
         Serial.printf("向特征写入消息: %s\r\n", cmd.c_str());
         pRemoteCharacteristic_2->writeValue(cmd.c_str(), cmd.length()); // 写入数据到设备
-        // doSend = false;                                                 // 重置 doSend 状态为 false
+        doSend = false;                                                 // 重置 doSend 状态为 false
     }
 }
 // BLE 初始化函数
@@ -341,6 +341,7 @@ void handleCommand(char *topic, byte *payload, unsigned int length)
         bool state = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
         cmd = (state ? "ON" : "OFF");            // 更新命令
         MQTT_Respond(String(topic), "success");  // 回复命令成功
+        doSend = true;
     }
     else
     {
@@ -350,10 +351,10 @@ void handleCommand(char *topic, byte *payload, unsigned int length)
 void setup()
 {
     Serial.begin(115200);
+    delay(100); // 等待串口初始化
     WIFI_Init();
     MQTT_Init();
     BLE_Init(); // 初始化BLE设备
-    BLE_Scan(); // 尝试扫描并连接BLE
 }
 
 void loop()
@@ -366,7 +367,7 @@ void loop()
     {
         client.loop();
     }
-
+    BLE_Scan(); // 尝试扫描并连接BLE
     long now = millis();
     if (now - lastMsg > 1000)
     { // 每 10 秒上报一次
@@ -377,6 +378,5 @@ void loop()
     if (isConnected && doSend)
     {
         sendCommand(); // 调用 sendCommand 函数发送命令
-       
     }
 }

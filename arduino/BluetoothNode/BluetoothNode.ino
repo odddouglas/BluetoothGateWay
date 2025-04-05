@@ -12,8 +12,7 @@
 DHT dht(DHTPIN, DHTTYPE, 15); // 初始化 DHT11 传感器
 
 // 控制标志位
-bool doRead = false;      // 控制是否读取传感器
-bool doSend = false;      // 控制是否发送数据
+
 bool isConnected = false; // 是否蓝牙连接
 
 float data_temp = 0.0; // 温湿度数据变量
@@ -87,7 +86,7 @@ void BLE_Init()
 // 发送数据的函数
 void sendData()
 {
-    if (isConnected && doSend)
+    if (isConnected)
     {
         StaticJsonDocument<200> doc;
         doc["temperature"] = data_temp;
@@ -102,17 +101,13 @@ void sendData()
 
         Serial.print("*** Sent JSON Data: ");
         Serial.println(jsonString);
-
-        doSend = false; // 发送后清除标志位
     }
 }
 
 // 读取DHT传感器的函数
 void DHT_Read()
 {
-    if (doRead)
-    {
-        delay(2000); // DHT传感器的稳定时间
+
 
         float h = dht.readHumidity();
         float t = dht.readTemperature();
@@ -127,12 +122,8 @@ void DHT_Read()
             data_temp = t;
 
             Serial.printf("湿度: %.2f %%\t 温度: %.2f °C\n", data_humi, data_temp);
-
-            doSend = true; // 数据读取完成，设置为发送标志
         }
-
-        doRead = false; // 读取完成后清除标志位
-    }
+    
 }
 
 void setup()
@@ -141,13 +132,14 @@ void setup()
 
     pinMode(12, OUTPUT);
     dht.begin();
+    delay(2000); // DHT传感器的稳定时间
     BLE_Init(); // 初始化BLE
 }
 
 void loop()
 {
-    sendData(); // 发送数据
     DHT_Read(); // 读取DHT传感器
+    sendData(); // 发送数据
 
     // 控制LED状态
     if (led_state)
