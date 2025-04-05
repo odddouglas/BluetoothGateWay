@@ -2,6 +2,7 @@
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#include <ArduinoJson.h>
 
 // 蓝牙相关定义
 BLECharacteristic *pCharacteristic;
@@ -22,7 +23,7 @@ BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;   // 存储远程读�
 BLERemoteCharacteristic *pRemoteCharacteristic_2 = nullptr; // 存储远程写入特征
 BLEClient *pClient = nullptr;                               // 客户端实例
 
-// 搜索到设备时回调功能
+// 搜索BLE设备回调
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
 public:
@@ -39,7 +40,7 @@ public:
     }
 };
 
-// 客户端与服务器连接与断开回调功能
+// BLE客户端与服务器连接与断开回调功能
 class MyClientCallback : public BLEClientCallbacks
 {
 public:
@@ -72,13 +73,30 @@ public:
     }
 };
 
-// 收到服务推送的数据时的回调函数
+// BLE收到客户端推送的数据时的回调函数
 void NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
-    int numValues = length / sizeof(int16_t); // 计算接收到的int16_t数量
-    int16_t *dataArr = (int16_t *)pData;      // 将数据转换为int16_t类型的数组
-    Serial.printf("接收到 %d 个int16_t值:\n", numValues);
-    Serial.printf("值: %s\n", dataArr); // 打印收到的值
+    // 创建 StaticJsonDocument 对象
+    StaticJsonDocument<200> doc;
+
+    // 尝试将接收到的数据解析为 JSON 格式
+    DeserializationError error = deserializeJson(doc, pData, length);
+
+    // 如果解析失败，输出错误信息
+    if (error)
+    {
+        Serial.print("解析JSON失败: ");
+        Serial.println(error.f_str());
+        return;
+    }
+
+    // 从 JSON 中提取各个字段
+    const char *ledStatus = doc["led"];     // LED 状态
+    float temperature = doc["temperature"]; // 温度
+    float humidity = doc["humidity"];       // 湿度
+
+    // 打印解析结果
+    Serial.printf("接收到数据:\nLED: %s\n温度: %.2f °C\n湿度: %.2f %%\n", ledStatus, temperature, humidity);
 }
 
 // 用来连接设备获取其中的服务与特征

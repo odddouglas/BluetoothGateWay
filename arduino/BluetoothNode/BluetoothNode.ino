@@ -4,8 +4,8 @@
 #include <BLE2902.h>
 #include <DHT.h>
 #include <DHT_U.h>
+#include <ArduinoJson.h>
 
-/******************* 温湿度传感器设置 **********************/
 #define DHTTYPE DHT11 // 使用 DHT11 温湿度传感器
 #define DHTPIN 2      // 温湿度传感器连接到 GPIO2
 
@@ -15,9 +15,6 @@ uint8_t flag_led = 0;         // 控制是否点亮LED的标志位
 uint8_t flag_send_dht = 0;    // 控制是否发送温湿度数据的标志位
 float dht_buf[2];             // 存储湿度和温度数据的数组
 
-/*****************************************/
-
-/******************* 蓝牙设置 **********************/
 BLECharacteristic *pCharacteristic; // 用于发送数据的BLE特征
 bool deviceConnected = false;       // 设备是否连接
 char BLEbuf[32] = {0};              // 用于存储发送的蓝牙数据
@@ -66,9 +63,7 @@ class MyCallbacks : public BLECharacteristicCallbacks
         }
     }
 };
-/*****************************************/
 
-/****************** 主程序 ***********************/
 void setup()
 {
     Serial.begin(115200); // 初始化串口通信
@@ -100,13 +95,28 @@ void loop()
     {
         if (flag_send_dht)
         {
-            memset(BLEbuf, 0, 32);                                           // 清空发送缓冲区
-            sprintf(BLEbuf, "湿度:%.2f, 温度:%.2f", dht_buf[0], dht_buf[1]); // 格式化湿度和温度数据
-            pCharacteristic->setValue(BLEbuf);                               // 设置发送的值
-            pCharacteristic->notify();                                       // 通知客户端接收数据
-            Serial.print("*** Sent Value: ");
-            Serial.println(BLEbuf); // 打印发送的值
-            flag_send_dht = 0;      // 重置标志位
+            // 获取LED状态（假设 flag_led 为 1 时表示 LED 点亮，0 表示熄灭）
+            const char *ledStatus = (flag_led == 1) ? "on" : "off";
+
+            // 创建 JSON 数据包
+            StaticJsonDocument<200> doc;
+            doc["temperature"] = dht_buf[1]; // 温度
+            doc["humidity"] = dht_buf[0];    // 湿度
+            doc["led"] = ledStatus;          // LED 状态
+
+            // 将 JSON 数据包转换为字符串
+            String jsonString;
+            serializeJson(doc, jsonString);
+
+            // 发送 JSON 字符串
+            pCharacteristic->setValue(jsonString.c_str());
+            pCharacteristic->notify(); // 通知客户端接收数据
+
+            // 打印发送的 JSON 数据
+            Serial.print("*** Sent JSON Data: ");
+            Serial.println(jsonString);
+
+            flag_send_dht = 0; // 重置标志位
         }
     }
 
@@ -126,9 +136,10 @@ void loop()
         }
         else
         {
-            Serial.printf("湿度: %.2f %%\t 温度: %.2f °C\n", h, t); // 打印读取的值
-            flag_send_dht = 1;                                      // 设置发送数据的标志位
-            flag_dht = 0;                                           // 重置读取传感器的标志位
+            // 打印读取的值
+            Serial.printf("湿度: %.2f %%\t 温度: %.2f °C\n", h, t);
+            flag_send_dht = 1; // 设置发送数据的标志位
+            flag_dht = 0;      // 重置读取传感器的标志位
         }
     }
 
