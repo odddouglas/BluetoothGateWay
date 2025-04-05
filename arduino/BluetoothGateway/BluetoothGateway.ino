@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -21,8 +22,10 @@ const char* mqttPassword = "106025bd4390a90b15da1f4aa5c4da6eabc5751bb4efcc166094
 
 // 设备属性上报的 topic
 #define MQTT_TOPIC_REPORT "$oc/devices/" DEVICE_ID "/sys/properties/report"
-// 设备返回命令响应的 topic
-#define MQTT_TOPIC_COMMAND "$oc/devices/" DEVICE_ID "/sys/commands/response/"
+// 设备订阅命令的 topic
+#define MQTT_TOPIC_COMMAND "$oc/devices/" DEVICE_ID "/sys/commands/#"
+
+#define MQTT_TOPIC_COMMAND_RESPOND "$oc/devices/" DEVICE_ID "/sys/commands/response/request_id="
 
 // 模拟数据
 int data_temp = 25;
@@ -77,7 +80,7 @@ void MQTT_Init() {
       Serial.println("Connected to MQTT broker");
 
       // 订阅命令下发Topic
-      String commandTopic = "$oc/devices/" DEVICE_ID "/sys/commands/#";
+      String commandTopic = MQTT_TOPIC_COMMAND;
       client.subscribe(commandTopic.c_str());  // 使用通配符订阅所有命令
     } else {
       Serial.print("Failed with state ");
@@ -107,51 +110,49 @@ void MQTT_POST() {
 }
 
 // 命令回调函数：处理平台下发的命令
+
+// 回调函数中
 void handleCommand(char* topic, byte* payload, unsigned int length) {
-  // 打印接收到的命令
-  String payloadStr = String((char*)payload);
+  // 反序列化 JSON
+  StaticJsonDocument<256> doc;
+  DeserializationError error = deserializeJson(doc, payload, length);
+  if (error) {
+    Serial.println("Failed to parse JSON");
+    return;
+  }
+  String payloadStr = "";
+  for (unsigned int i = 0; i < length; i++) {
+    payloadStr += (char)payload[i];
+  }
   Serial.println("Received command: " + payloadStr);
 
-  // 解析命令（假设命令结构包含 command_name 和 paras）
-  String command_name = "";  // 默认空命令
-  String led_on_off = "";    // 默认空参数
-  if (payloadStr.indexOf("ctrl") >= 0) {
-    command_name = "ctrl";
-    // 假设 paras 中包含 "led_on_off" 参数
-    int ledIndex = payloadStr.indexOf("led_on_off");
-    if (ledIndex >= 0) {
-      led_on_off = payloadStr.substring(ledIndex + 12, ledIndex + 13);  // 获取 led_on_off 参数
-    }
-  }
+  String commandName = doc["command_name"];
+  if (commandName == "ctrl") {
+    bool ledOn = doc["paras"]["led_on_off"];  // 获取布尔值
 
-  // 根据命令执行操作
-  if (command_name == "ctrl") {
-    if (led_on_off == "1") {
-      led_state = true;  // 打开LED
-      sendCommandResponse(topic, "success");  // 传递当前 topic
-    } else if (led_on_off == "0") {
-      led_state = false; // 关闭LED
-      sendCommandResponse(topic, "success");  // 传递当前 topic
-    } else {
-      sendCommandResponse(topic, "failure");  // 传递当前 topic
-    }
+    led_state = ledOn;
+    sendCommandResponse(String(topic), "success");
+  } else {
+    sendCommandResponse(String(topic), "failure");
   }
 }
 
 // 发送命令响应到平台
 void sendCommandResponse(String topic, String result) {
+  // 构造响应 JSON 数据
   char jsonBuf[128];
   snprintf(jsonBuf, sizeof(jsonBuf),
            "{\"result_code\":0,\"response_name\":\"COMMAND_RESPONSE\",\"paras\":{\"result\":\"%s\"}}",
            result.c_str());
 
-  // 提取 request_id
-  String requestId = extractRequestIdFromTopic(topic);
+  // 从 topic 中提取 request_id
+  int idIndex = topic.lastIndexOf("request_id=");
+  String requestId = (idIndex >= 0) ? topic.substring(idIndex + 11) : "";
 
-  // 拼接响应 Topic
-  String responseTopic = "$oc/devices/" DEVICE_ID "/sys/commands/response/request_id=" + requestId;
+  // 构造响应的 topic
+  String responseTopic = MQTT_TOPIC_COMMAND_RESPOND + requestId;
 
-  // 发布到命令响应 Topic
+  // 发布命令响应
   boolean resultPublish = client.publish(responseTopic.c_str(), jsonBuf);
   if (resultPublish) {
     Serial.println("[MQTT] Command Response Sent:");
@@ -161,11 +162,3 @@ void sendCommandResponse(String topic, String result) {
   }
 }
 
-// 从接收到的 Topic 中提取 request_id（示例）
-String extractRequestIdFromTopic(String topic) {
-  int idIndex = topic.lastIndexOf("request_id=");
-  if (idIndex >= 0) {
-    return topic.substring(idIndex + 11);  // 获取 request_id
-  }
-  return "";
-}
