@@ -8,20 +8,24 @@
 BLECharacteristic *pCharacteristic;
 bool deviceConnected = false;
 char BLEbuf[32] = {0};
-uint32_t cnt = 0;
+int count = 0;
 
 #define SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"           // UART服务UUID
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E" // 接收特征UUID
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E" // 发送特征UUID
 
-boolean doScan = true;     // 是否开始扫描设备
-boolean doConnect = false; // 是否连接设备
-boolean connected = false; // 设备是否已连接
+boolean doScan = true;       // 是否开始扫描设备
+boolean doConnect = false;   // 是否连接设备
+boolean isConnected = false; // 设备是否已连接
 
 BLEAdvertisedDevice *pServer = nullptr;                     // 存储找到的设备
 BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;   // 存储远程读取特征
 BLERemoteCharacteristic *pRemoteCharacteristic_2 = nullptr; // 存储远程写入特征
 BLEClient *pClient = nullptr;                               // 客户端实例
+
+float data_temp = 0.0; // 温湿度数据变量
+float data_humi = 0.0;
+bool led_state = false; // LED 状态变量
 
 // 搜索BLE设备回调
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
@@ -46,7 +50,7 @@ class MyClientCallback : public BLEClientCallbacks
 public:
     void onConnect(BLEClient *pclient)
     {
-        connected = true;
+        isConnected = true;
         Serial.println("连接设备成功");
         // 设置MTU大小
         if (pClient->setMTU(512))
@@ -61,7 +65,7 @@ public:
 
     void onDisconnect(BLEClient *pclient)
     {
-        connected = false;
+        isConnected = false;
         doScan = true;
         Serial.println("失去与设备的连接");
 
@@ -91,12 +95,12 @@ void NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *
     }
 
     // 从 JSON 中提取各个字段
-    const char *ledStatus = doc["led"];     // LED 状态
-    float temperature = doc["temperature"]; // 温度
-    float humidity = doc["humidity"];       // 湿度
+    led_state = doc["led"];         // LED 状态（布尔值）
+    data_temp = doc["temperature"]; // 温度
+    data_humi = doc["humidity"];    // 湿度
 
     // 打印解析结果
-    Serial.printf("接收到数据:\nLED: %s\n温度: %.2f °C\n湿度: %.2f %%\n", ledStatus, temperature, humidity);
+    Serial.printf("接收到数据:\nLED: %s\n温度: %.2f °C\n湿度: %.2f %%\n", led_state ? "on" : "off", data_temp, data_humi);
 }
 
 // 用来连接设备获取其中的服务与特征
@@ -154,12 +158,10 @@ bool ConnectToServer()
     return true;
 }
 
-void setup()
+// BLE 初始化函数
+void BLE_Init()
 {
-    Serial.begin(115200);
-
-    // 初始化BLE设备
-    BLEDevice::init("");
+    BLEDevice::init(""); // 初始化BLE设备
 
     BLEScan *pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks()); // 设置设备扫描回调
@@ -168,7 +170,36 @@ void setup()
     pBLEScan->setWindow(80);                                                   // 扫描窗口
 }
 
-int count = 0;
+// 发送命令到设备的函数
+void sendCommand()
+{
+    count++; // 增加计数
+    if (count > 2)
+    {
+        count = 0; // 重置计数
+    }
+    String command = "10"; // 默认发送的值
+    if (count == 1)
+    {
+        command = "00"; // 发送其他值
+    }
+    else if (count == 2)
+    {
+        command = "01"; // 发送其他值
+    }
+    if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
+    {
+        Serial.printf("向特征写入消息: %s\r\n", command.c_str());
+        pRemoteCharacteristic_2->writeValue(command.c_str(), command.length()); // 写入数据到设备
+    }
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    BLE_Init(); // 初始化BLE设备
+}
+
 void loop()
 {
     // 开始扫描设备
@@ -184,7 +215,7 @@ void loop()
     {
         if (ConnectToServer())
         {
-            connected = true; // 设置连接状态
+            isConnected = true; // 设置连接状态
         }
         else
         {
@@ -193,27 +224,12 @@ void loop()
         doConnect = false;
     }
 
-    // 如果已经连接，可以向设备发送数据
-    if (connected && pRemoteCharacteristic && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
+    // 如果已经连接，发送命令
+    if (isConnected)
     {
-        String newValue = "10"; // 默认发送的值
-        if (count == 1)
-        {
-            newValue = "00"; // 发送其他值
-        }
-        else if (count == 2)
-        {
-            newValue = "01"; // 发送其他值
-        }
 
-        Serial.printf("向特征写入消息: %s\r\n", newValue.c_str());
-        pRemoteCharacteristic_2->writeValue(newValue.c_str(), newValue.length()); // 写入数据到设备
+        sendCommand(); // 调用 sendCommand 函数发送命令
 
         delay(3500); // 控制发送间隔
-        count++;     // 增加计数
-        if (count > 2)
-        {
-            count = 0; // 重置计数
-        }
     }
 }

@@ -16,12 +16,10 @@ uint8_t flag_dht = 0;
 uint8_t flag_led = 0;
 uint8_t flag_send_dht = 0;
 
-// 温湿度数据变量
-float data_temp = 0.0;
+float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
 
-// LED 状态变量
-bool led_state = false;
+bool led_state = false; // LED 状态变量
 
 BLECharacteristic *pCharacteristic;
 bool deviceConnected = false;
@@ -89,16 +87,15 @@ void BLE_Init()
 }
 
 // 发送数据的函数
+// 发送数据的函数
 void sendData()
 {
     if (deviceConnected && flag_send_dht)
     {
-        const char *ledStatus = led_state ? "on" : "off";
-
         StaticJsonDocument<200> doc;
         doc["temperature"] = data_temp;
         doc["humidity"] = data_humi;
-        doc["led"] = ledStatus;
+        doc["led"] = led_state; // 直接使用布尔值
 
         String jsonString;
         serializeJson(doc, jsonString);
@@ -146,10 +143,8 @@ void setup()
 
     pinMode(12, OUTPUT);
     dht.begin();
-
     BLE_Init(); // 初始化BLE
 
-    Serial.println("等待节点连接...");
 }
 
 void loop()
