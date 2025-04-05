@@ -8,7 +8,6 @@
 BLECharacteristic *pCharacteristic;
 bool deviceConnected = false;
 char BLEbuf[32] = {0};
-int count = 0;
 
 #define SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"           // UART服务UUID
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E" // 接收特征UUID
@@ -17,6 +16,7 @@ int count = 0;
 boolean doScan = true;       // 是否开始扫描设备
 boolean doConnect = false;   // 是否连接设备
 boolean isConnected = false; // 设备是否已连接
+boolean doSend = false;      // 是否发送命令
 
 BLEAdvertisedDevice *pServer = nullptr;                     // 存储找到的设备
 BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;   // 存储远程读取特征
@@ -104,7 +104,7 @@ void NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *
 }
 
 // 用来连接设备获取其中的服务与特征
-bool ConnectToServer()
+bool connectToServer()
 {
     pClient = BLEDevice::createClient(); // 创建客户端实例
     if (!pClient)
@@ -138,7 +138,7 @@ bool ConnectToServer()
 
     if (!pRemoteCharacteristic || !pRemoteCharacteristic_2)
     {
-        Serial.println("获取特性失败");
+        Serial.println("获取特征失败");
         pClient->disconnect();
         return false;
     }
@@ -179,12 +179,12 @@ void BLE_Scan()
         BLEDevice::getScan()->start(0);       // 持续搜索设备
     }
 
-    // 如果找到设备就尝试连接
+    // 如果找到设备就尝试一次连接
     if (doConnect)
     {
-        if (ConnectToServer())
+        if (connectToServer())
         {
-            isConnected = true; // 设置连接状态
+            isConnected = true; // 设置连接状态为已连接
         }
         else
         {
@@ -196,24 +196,12 @@ void BLE_Scan()
 // 发送命令到设备的函数
 void sendCommand()
 {
-    count++; // 增加计数
-    if (count > 2)
-    {
-        count = 0; // 重置计数
-    }
-    String command = "10"; // 默认发送的值
-    if (count == 1)
-    {
-        command = "00"; // 发送其他值
-    }
-    else if (count == 2)
-    {
-        command = "01"; // 发送其他值
-    }
+    String cmd = "ON"; // 默认发送的值
     if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
     {
-        Serial.printf("向特征写入消息: %s\r\n", command.c_str());
-        pRemoteCharacteristic_2->writeValue(command.c_str(), command.length()); // 写入数据到设备
+        Serial.printf("向特征写入消息: %s\r\n", cmd.c_str());
+        pRemoteCharacteristic_2->writeValue(cmd.c_str(), cmd.length()); // 写入数据到设备
+        doSend = false;                                                 // 重置 doSend 状态为 false
     }
 }
 
@@ -226,13 +214,10 @@ void setup()
 
 void loop()
 {
-
     // 如果已经连接，发送命令
-    if (isConnected)
+    if (isConnected && doSend)
     {
-
         sendCommand(); // 调用 sendCommand 函数发送命令
-
-        delay(3500); // 控制发送间隔
+        delay(3500);   // 控制发送间隔
     }
 }

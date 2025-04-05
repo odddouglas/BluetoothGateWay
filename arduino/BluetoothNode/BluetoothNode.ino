@@ -18,7 +18,6 @@ uint8_t flag_send_dht = 0;
 
 float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
-
 bool led_state = false; // LED 状态变量
 
 BLECharacteristic *pCharacteristic;
@@ -49,11 +48,11 @@ class MyCallbacks : public BLECharacteristicCallbacks
                 Serial.print(rxValue[i]);
             Serial.println();
 
-            if (rxValue.find("00") != -1)
+            if (rxValue.find("ON") != -1)
             {
-                flag_dht = 1;
+                flag_led = 1;
             }
-            else if (rxValue.find("01") != -1)
+            else if (rxValue.find("OFF") != -1)
             {
                 flag_led = 1;
             }
@@ -144,7 +143,6 @@ void setup()
     pinMode(12, OUTPUT);
     dht.begin();
     BLE_Init(); // 初始化BLE
-
 }
 
 void loop()
