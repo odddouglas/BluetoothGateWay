@@ -12,17 +12,15 @@
 DHT dht(DHTPIN, DHTTYPE, 15); // 初始化 DHT11 传感器
 
 // 控制标志位
-uint8_t flag_dht = 0;
-uint8_t flag_led = 0;
-uint8_t flag_send_dht = 0;
+bool doRead = false;      // 控制是否读取传感器
+bool doSend = false;      // 控制是否发送数据
+bool isConnected = false; // 是否蓝牙连接
 
 float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
 bool led_state = false; // LED 状态变量
 
 BLECharacteristic *pCharacteristic;
-bool deviceConnected = false;
-char BLEbuf[32] = {0};
 
 #define SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
@@ -31,8 +29,8 @@ char BLEbuf[32] = {0};
 // BLE服务器连接回调
 class MyServerCallbacks : public BLEServerCallbacks
 {
-    void onConnect(BLEServer *pServer) { deviceConnected = true; }
-    void onDisconnect(BLEServer *pServer) { deviceConnected = false; }
+    void onConnect(BLEServer *pServer) { isConnected = true; }
+    void onDisconnect(BLEServer *pServer) { isConnected = false; }
 };
 
 // BLE特征写入回调
@@ -48,13 +46,14 @@ class MyCallbacks : public BLECharacteristicCallbacks
                 Serial.print(rxValue[i]);
             Serial.println();
 
+            // 根据接收到的命令控制LED
             if (rxValue.find("ON") != -1)
             {
-                flag_led = 1;
+                led_state = true; // 点亮LED
             }
             else if (rxValue.find("OFF") != -1)
             {
-                flag_led = 1;
+                led_state = false; // 熄灭LED
             }
         }
     }
@@ -86,15 +85,14 @@ void BLE_Init()
 }
 
 // 发送数据的函数
-// 发送数据的函数
 void sendData()
 {
-    if (deviceConnected && flag_send_dht)
+    if (isConnected && doSend)
     {
         StaticJsonDocument<200> doc;
         doc["temperature"] = data_temp;
         doc["humidity"] = data_humi;
-        doc["led"] = led_state; // 直接使用布尔值
+        doc["led"] = led_state; // 使用led_state来控制LED状态
 
         String jsonString;
         serializeJson(doc, jsonString);
@@ -105,16 +103,16 @@ void sendData()
         Serial.print("*** Sent JSON Data: ");
         Serial.println(jsonString);
 
-        flag_send_dht = 0;
+        doSend = false; // 发送后清除标志位
     }
 }
 
 // 读取DHT传感器的函数
 void DHT_Read()
 {
-    if (flag_dht)
+    if (doRead)
     {
-        delay(2000);
+        delay(2000); // DHT传感器的稳定时间
 
         float h = dht.readHumidity();
         float t = dht.readTemperature();
@@ -130,9 +128,10 @@ void DHT_Read()
 
             Serial.printf("湿度: %.2f %%\t 温度: %.2f °C\n", data_humi, data_temp);
 
-            flag_send_dht = 1;
-            flag_dht = 0;
+            doSend = true; // 数据读取完成，设置为发送标志
         }
+
+        doRead = false; // 读取完成后清除标志位
     }
 }
 
@@ -149,18 +148,16 @@ void loop()
 {
     sendData(); // 发送数据
     DHT_Read(); // 读取DHT传感器
-    if (flag_led)
+
+    // 控制LED状态
+    if (led_state)
     {
-        digitalWrite(12, HIGH);
-        led_state = true;
-        delay(1000);
-
-        digitalWrite(12, LOW);
-        led_state = false;
-        delay(1000);
-
-        flag_led = 0;
+        digitalWrite(12, HIGH); // 点亮LED
+    }
+    else
+    {
+        digitalWrite(12, LOW); // 熄灭LED
     }
 
-    delay(1000);
+    delay(1000); // 延迟
 }

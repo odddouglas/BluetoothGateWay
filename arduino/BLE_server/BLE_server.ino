@@ -6,8 +6,6 @@
 
 // 蓝牙相关定义
 BLECharacteristic *pCharacteristic;
-bool deviceConnected = false;
-char BLEbuf[32] = {0};
 
 #define SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"           // UART服务UUID
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E" // 接收特征UUID
@@ -16,7 +14,7 @@ char BLEbuf[32] = {0};
 boolean doScan = true;       // 是否开始扫描设备
 boolean doConnect = false;   // 是否连接设备
 boolean isConnected = false; // 设备是否已连接
-boolean doSend = false;      // 是否发送命令
+boolean doSend = true;       // 是否发送命令
 
 BLEAdvertisedDevice *pServer = nullptr;                     // 存储找到的设备
 BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;   // 存储远程读取特征
@@ -26,6 +24,9 @@ BLEClient *pClient = nullptr;                               // 客户端实例
 float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
 bool led_state = false; // LED 状态变量
+
+bool state = false; // 测试命令的
+String cmd = "";    // 命令
 
 // 搜索BLE设备回调
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
@@ -196,12 +197,13 @@ void BLE_Scan()
 // 发送命令到设备的函数
 void sendCommand()
 {
-    String cmd = "ON"; // 默认发送的值
+    state = !state;
+    cmd = (state ? "ON" : "OFF"); // 更新命令
     if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
     {
         Serial.printf("向特征写入消息: %s\r\n", cmd.c_str());
         pRemoteCharacteristic_2->writeValue(cmd.c_str(), cmd.length()); // 写入数据到设备
-        doSend = false;                                                 // 重置 doSend 状态为 false
+        //doSend = false;                                                 // 重置 doSend 状态为 false
     }
 }
 

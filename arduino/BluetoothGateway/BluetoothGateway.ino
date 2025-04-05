@@ -30,6 +30,7 @@ const char *mqttPassword = "106025bd4390a90b15da1f4aa5c4da6eabc5751bb4efcc166094
 float data_temp = 25.0;
 float data_humi = 60.0;
 bool led_state = true;
+string cmd = "OFF";
 
 long lastMsg = 0;
 
@@ -52,13 +53,10 @@ void loop()
     }
 
     long now = millis();
-    if (now - lastMsg > 10000)
+    if (now - lastMsg > 1000)
     { // 每 10 秒上报一次
         lastMsg = now;
         MQTT_Report();
-        data_temp += 1; // 模拟数据变化
-        data_humi += 2;
-        led_state = !led_state;
     }
 }
 
@@ -171,7 +169,7 @@ void handleCommand(char *topic, byte *payload, unsigned int length)
     if (commandName == "ctrl") // 判断是否为控制命令
     {
         bool state = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
-        led_state = state;                       // 更新本地 LED 状态变量
+        cmd = (state ? "ON" : "OFF");            // 更新命令
         MQTT_Respond(String(topic), "success");  // 回复命令成功
     }
     else
