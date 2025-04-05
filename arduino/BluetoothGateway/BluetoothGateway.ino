@@ -52,10 +52,10 @@ float data_humi = 0.0;
 bool led_state = false; // LED 状态变量
 
 String cmd = ""; // 命令
-long lastMsg = 0;
+long last = 0;   // 用于定时发报
 
 // 搜索BLE设备回调
-class BLE_MyAdvertisedDevice_Callbacks : public BLEAdvertisedDeviceCallbacks
+class BLE_MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
 public:
     void onResult(BLEAdvertisedDevice advertisedDevice)
@@ -72,7 +72,7 @@ public:
 };
 
 // BLE客户端与服务器连接与断开回调功能
-class BLE_MyClient_Callbacks : public BLEClientCallbacks
+class BLE_MyClientCallbacks : public BLEClientCallbacks
 {
 public:
     void onConnect(BLEClient *pclient)
@@ -110,7 +110,7 @@ void BLE_Init()
     BLEDevice::init(""); // 初始化BLE设备
 
     BLEScan *pBLEScan = BLEDevice::getScan();
-    pBLEScan->setAdvertisedDeviceCallbacks(new BLE_MyAdvertisedDevice_Callbacks()); // 设置设备扫描回调
+    pBLEScan->setAdvertisedDeviceCallbacks(new BLE_MyAdvertisedDeviceCallbacks()); // 设置设备扫描回调
     pBLEScan->setActiveScan(true);                                                  // 开启主动扫描
     pBLEScan->setInterval(100);                                                     // 扫描间隔
     pBLEScan->setWindow(80);                                                        // 扫描窗口
@@ -150,7 +150,7 @@ bool BLE_Connect()
         return false;
     }
 
-    pClient->setClientCallbacks(new BLE_MyClient_Callbacks()); // 添加客户端连接与断开回调
+    pClient->setClientCallbacks(new BLE_MyClientCallbacks()); // 添加客户端连接与断开回调
 
     if (!pClient->connect(pServer))
     { // 尝试连接设备
@@ -189,23 +189,26 @@ bool BLE_Connect()
 
     if (pRemoteCharacteristic->canNotify())
     {
-        pRemoteCharacteristic->registerForNotify(BLE_Notify_Callback); // 注册通知回调函数
+        pRemoteCharacteristic->registerForNotify(BLE_NotifyCallback); // 注册通知回调函数
     }
 
     return true;
 }
 // 发送命令到设备的函数
 void BLE_Send_CMD()
-{
-    if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
+{ // 如果已经连接，发送命令
+    if (doSend)
     {
-        Serial.printf("向特征写入消息: %s\r\n", cmd.c_str());
-        pRemoteCharacteristic_2->writeValue(cmd.c_str(), cmd.length()); // 写入数据到设备
-        doSend = false;                                                 // 重置 doSend 状态为 false
+        if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
+        {
+            Serial.printf("向特征写入消息: %s\r\n", cmd.c_str());
+            pRemoteCharacteristic_2->writeValue(cmd.c_str(), cmd.length()); // 写入数据到设备
+            doSend = false;                                                 // 重置 doSend 状态为 false
+        }
     }
 }
 // BLE收到客户端推送的数据时的回调函数
-void BLE_Notify_Callback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
+void BLE_NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
     // 创建 StaticJsonDocument 对象
     StaticJsonDocument<200> doc;
@@ -248,7 +251,7 @@ void MQTT_Init()
 {
     client.setServer(mqttServer, mqttPort);
     client.setKeepAlive(60);
-    client.setCallback(MQTT_CMD_Callback); // 设置命令回调函数
+    client.setCallback(MQTT_CmdCallback); // 设置命令回调函数
 
     Serial.println("[MQTT] Connecting to Huawei Cloud...");
 
@@ -272,7 +275,17 @@ void MQTT_Init()
         }
     }
 }
-
+void MQTT_Scan()
+{
+    if (!client.connected())
+    {
+        MQTT_Init();
+    }
+    else
+    {
+        client.loop();
+    }
+}
 // 上报设备属性
 void MQTT_Report()
 {
@@ -316,7 +329,7 @@ void MQTT_Respond(String topic, String result)
 }
 
 // 命令回调函数：处理平台下发的命令
-void MQTT_CMD_Callback(char *topic, byte *payload, unsigned int length)
+void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
 {
     StaticJsonDocument<256> doc; // 创建静态 JSON 文档用于解析
 
@@ -359,25 +372,14 @@ void setup()
 
 void loop()
 {
-    BLE_Scan(); // 尝试扫描并连接BLE
-    if (!client.connected())
-    {
-        MQTT_Init();
-    }
-    else
-    {
-        client.loop();
-    }
+    BLE_Scan();  // 尝试扫描并连接BLE
+    MQTT_Scan(); // 尝试扫描并连接云
 
     long now = millis();
-    if (now - lastMsg > 1000)
+    if (now - last > 1000)
     { // 每 10 秒上报一次
-        lastMsg = now;
+        last = now;
         MQTT_Report();
-    }
-    // 如果已经连接，发送命令
-    if (isConnected && doSend)
-    {
-        BLE_Send_CMD(); // 调用 BLE_Send_CMD 函数发送命令
+        BLE_Send_CMD(); // 发送命令
     }
 }

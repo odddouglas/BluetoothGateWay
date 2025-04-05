@@ -134,18 +134,10 @@ void setup()
 
 void loop()
 {
-    DHT_Read(); // 读取DHT传感器
+    DHT_Read();     // 读取DHT传感器
     BLE_SendData(); // 发送数据
 
-    // 控制LED状态
-    if (led_state)
-    {
-        digitalWrite(12, HIGH); // 点亮LED
-    }
-    else
-    {
-        digitalWrite(12, LOW); // 熄灭LED
-    }
+    digitalWrite(12, led_state); // 点亮LED
 
     delay(1000); // 延迟
 }
