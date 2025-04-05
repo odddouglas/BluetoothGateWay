@@ -169,7 +169,30 @@ void BLE_Init()
     pBLEScan->setInterval(100);                                                // 扫描间隔
     pBLEScan->setWindow(80);                                                   // 扫描窗口
 }
+void BLE_Scan()
+{
+    // 开始扫描设备
+    if (doScan)
+    {
+        Serial.println("开始搜索设备");
+        BLEDevice::getScan()->clearResults(); // 清除上次扫描结果
+        BLEDevice::getScan()->start(0);       // 持续搜索设备
+    }
 
+    // 如果找到设备就尝试连接
+    if (doConnect)
+    {
+        if (ConnectToServer())
+        {
+            isConnected = true; // 设置连接状态
+        }
+        else
+        {
+            doScan = true; // 重新开始扫描
+        }
+        doConnect = false;
+    }
+}
 // 发送命令到设备的函数
 void sendCommand()
 {
@@ -198,31 +221,11 @@ void setup()
 {
     Serial.begin(115200);
     BLE_Init(); // 初始化BLE设备
+    BLE_Scan(); // 尝试扫描并连接BLE
 }
 
 void loop()
 {
-    // 开始扫描设备
-    if (doScan)
-    {
-        Serial.println("开始搜索设备");
-        BLEDevice::getScan()->clearResults(); // 清除上次扫描结果
-        BLEDevice::getScan()->start(0);       // 持续搜索设备
-    }
-
-    // 如果找到设备就尝试连接
-    if (doConnect)
-    {
-        if (ConnectToServer())
-        {
-            isConnected = true; // 设置连接状态
-        }
-        else
-        {
-            doScan = true; // 重新开始扫描
-        }
-        doConnect = false;
-    }
 
     // 如果已经连接，发送命令
     if (isConnected)
