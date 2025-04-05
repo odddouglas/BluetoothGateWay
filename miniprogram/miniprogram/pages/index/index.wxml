@@ -5,18 +5,15 @@
 <t-cell title="湿度" note="{{humidity}} %" arrow />
 <t-divider content="LED控制面板" />
 <t-cell title="LED">
-  <t-switch bindchange="handleChange" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
+    <t-switch bindchange="handleChange" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
 </t-cell>
 <t-divider content="网关连接情况" />
 <t-cell title="网关" hover note="辅助信息" arrow />
 <view class="button-example">
-  <t-button bindtap="handleButton3" theme="default" block size="large" t-class="group-btn">
-    下发命令
-  </t-button>
-  <t-button bindtap="handleButton2" theme="default" block size="large" t-class="group-btn">
-    获取数据
-  </t-button>
+    <t-button bindtap="handleButton2" theme="default" block size="large" t-class="group-btn">
+        获取数据
+    </t-button>
 </view>
 <view class="button-example">
-  <t-button bindtap="handleButton1" theme="primary" size="large" block>获取云认证</t-button>
+    <t-button bindtap="handleButton1" theme="primary" size="large" block>获取云认证</t-button>
 </view>

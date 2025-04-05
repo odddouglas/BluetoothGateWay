@@ -3,6 +3,7 @@ Page({
         //设备属性
         temperature: 0.0,
         humidity: 0.0,
+        led_state: true,
         led_on_off: true,
         //POST https://iam.cn-north-4.myhuaweicloud.com/v3/auth/tokens
         tokenUrl: 'https://iam.cn-north-4.myhuaweicloud.com/v3/auth/tokens',
@@ -34,6 +35,7 @@ Page({
         this.setData({
             led_on_off: e.detail.value,
         });
+        this.setCommand();
     },
 
     // 按钮1：获取 token
@@ -48,11 +50,6 @@ Page({
         console.log(e);
     },
 
-    // 按钮3：下发命令
-    handleButton3(e) {
-        this.setCommand();
-        console.log(e);
-    },
 
     // 获取 token
     getToken() {
@@ -114,7 +111,7 @@ Page({
                 that.setData({
                     temperature: shadow.temperature || 0,
                     humidity: shadow.humidity || 0,
-                    led_on_off: shadow.led || false
+                    led_state: shadow.led || false
                 });
             },
             fail() {
@@ -130,14 +127,14 @@ Page({
     setCommand() {
         console.log("开始下发命令");
         const token = wx.getStorageSync('token');
-        const ledState = this.data.led_on_off;
+        const cmd = this.data.led_on_off;
         wx.request({
             url: this.data.commandUrl,
             method: 'POST',
             data: JSON.stringify({
                 service_id: this.data.serviceId,
                 command_name: this.data.commandName,
-                paras: { led_on_off: ledState }
+                paras: { led_on_off: cmd }
             }),
             header: {
                 'content-type': 'application/json',
