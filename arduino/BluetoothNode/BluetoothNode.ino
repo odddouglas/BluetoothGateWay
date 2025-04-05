@@ -85,7 +85,7 @@ void setup()
 
     pService->start();                  // 启动服务
     pServer->getAdvertising()->start(); // 开始广播
-    Serial.println("Waiting for client connection...");
+    Serial.println("等待节点连接...");
 }
 
 void loop()
