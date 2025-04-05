@@ -19,7 +19,7 @@ const char *mqttUser = "67ed58015367f573f77ef961_esp32";
 const char *mqttPassword = "106025bd4390a90b15da1f4aa5c4da6eabc5751bb4efcc16609465b3982c08ae";
 
 #define DEVICE_ID "67ed58015367f573f77ef961_esp32"
-
+#define SERVER_ID "gateway_data"
 // 设备属性上报的 topic
 #define MQTT_TOPIC_REPORT "$oc/devices/" DEVICE_ID "/sys/properties/report"
 // 设备订阅命令的 topic
@@ -55,7 +55,7 @@ void loop()
   if (now - lastMsg > 10000)
   { // 每 10 秒上报一次
     lastMsg = now;
-    MQTT_POST();
+    MQTT_Report();
     data_temp += 1; // 模拟数据变化
     data_humi += 2;
     led_state = !led_state;
@@ -82,81 +82,51 @@ void MQTT_Init()
   client.setKeepAlive(60);
   client.setCallback(handleCommand); // 设置命令回调函数
 
+  Serial.println("[MQTT] Connecting to Huawei Cloud...");
+
   while (!client.connected())
   {
-    Serial.println("Connecting to Huawei Cloud MQTT...");
-    if (client.connect(ClientId, mqttUser, mqttPassword))
-    {
-      Serial.println("Connected to MQTT broker");
+    boolean result = client.connect(ClientId, mqttUser, mqttPassword);
 
-      // 订阅命令下发Topic
-      String commandTopic = MQTT_TOPIC_COMMAND;
-      client.subscribe(commandTopic.c_str()); // 使用通配符订阅所有命令
+    Serial.println(result ? "[MQTT] Connected to Broker!" : "[MQTT] Connection Failed!");
+    if (result)
+    {
+      // 订阅命令下发 Topic
+      boolean subResult = client.subscribe(MQTT_TOPIC_COMMAND);
+      Serial.println("[MQTT] Subscribe to Command Topic:");
+      Serial.println(subResult ? "Subscribe Success!" : "Subscribe Failed!");
     }
     else
     {
-      Serial.print("Failed with state ");
+      Serial.print("[MQTT] Failed State Code: ");
       Serial.println(client.state());
-      delay(3000);
+      delay(3000); // 等待后重连
     }
   }
 }
 
-void MQTT_POST()
+// 上报设备属性
+void MQTT_Report()
 {
   // 构造 JSON 数据（注意服务 ID 和属性结构）
   char jsonBuf[256];
   snprintf(jsonBuf, sizeof(jsonBuf),
-           "{\"services\":[{\"service_id\":\"gateway_data\",\"properties\":{"
+           "{\"services\":[{\"service_id\":\"%s\",\"properties\":{"
            "\"temperature\":%.2f,"
            "\"humidity\":%.2f,"
            "\"led\":%s"
            "}}]}",
-           data_temp, data_humi, led_state ? "true" : "false");
+           SERVER_ID, data_temp, data_humi, led_state ? "true" : "false");
 
   // 发布到华为云平台
-  boolean result = client.publish(MQTT_TOPIC_REPORT, jsonBuf);
+  boolean reportResult = client.publish(MQTT_TOPIC_REPORT, jsonBuf);
   Serial.println("[MQTT] Publish:");
   Serial.println(jsonBuf);
-  Serial.println(result ? "Publish Success!" : "Publish Failed!");
-}
-
-// 命令回调函数：处理平台下发的命令
-
-// 回调函数中
-void handleCommand(char *topic, byte *payload, unsigned int length)
-{
-  // 反序列化 JSON
-  StaticJsonDocument<256> doc;
-  DeserializationError error = deserializeJson(doc, payload, length);
-  if (error)
-  {
-    Serial.println("Failed to parse JSON");
-    return;
-  }
-  String payloadStr = "";
-  for (unsigned int i = 0; i < length; i++)
-  {
-    payloadStr += (char)payload[i];
-  }
-  Serial.println("Received command: " + payloadStr);
-
-  String commandName = doc["command_name"];
-  if (commandName == "ctrl")
-  {
-    bool ledOn = doc["paras"]["led_on_off"]; // 获取布尔值
-
-    led_state = ledOn;
-    sendCommandResponse(String(topic), "success");
-  }
-  else
-  {
-    sendCommandResponse(String(topic), "failure");
-  }
+  Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
 }
 
 // 发送命令响应到平台
-void sendCommandResponse(String topic, String result)
+void MQTT_Respond(String topic, String result)
 {
   // 构造响应 JSON 数据
   char jsonBuf[128];
@@ -170,16 +140,42 @@ void sendCommandResponse(String topic, String result)
 
   // 构造响应的 topic
   String responseTopic = MQTT_TOPIC_COMMAND_RESPOND + requestId;
-
   // 发布命令响应
-  boolean resultPublish = client.publish(responseTopic.c_str(), jsonBuf);
-  if (resultPublish)
+  boolean respondResult = client.publish(responseTopic.c_str(), jsonBuf);
+  Serial.println("[MQTT] Publish (Command Response):");
+  Serial.println(jsonBuf);
+  Serial.println(respondResult ? "Publish Success!" : "Publish Failed!");
+}
+
+// 命令回调函数：处理平台下发的命令
+void handleCommand(char *topic, byte *payload, unsigned int length)
+{
+  StaticJsonDocument<256> doc; // 创建静态 JSON 文档用于解析
+
+  DeserializationError error = deserializeJson(doc, payload, length); // 解析接收到的 JSON 数据
+  if (error)
   {
-    Serial.println("[MQTT] Command Response Sent:");
-    Serial.println(jsonBuf);
+    Serial.println("Failed to parse JSON"); // 打印解析失败信息
+    return;                                 // 退出处理函数
+  }
+
+  String payloadStr = ""; // 用于打印接收到的原始 JSON 字符串
+  for (unsigned int i = 0; i < length; i++)
+  {
+    payloadStr += (char)payload[i]; // 字节流转换为字符串
+  }
+  Serial.println("Received command: " + payloadStr); // 打印接收到的命令
+
+  String commandName = doc["command_name"]; // 获取命令名称字段
+
+  if (commandName == "ctrl") // 判断是否为控制命令
+  {
+    bool ledOn = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
+    led_state = ledOn;                       // 更新本地 LED 状态变量
+    MQTT_Respond(String(topic), "success");  // 回复命令成功
   }
   else
   {
-    Serial.println("[MQTT] Failed to send command response");
+    MQTT_Respond(String(topic), "failure"); // 命令无效，回复失败
   }
 }
