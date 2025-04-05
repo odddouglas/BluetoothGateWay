@@ -1,6 +1,24 @@
 Page({
     data: {
+        //设备属性
+        temperature: 0.0,
+        humidity: 0.0,
         led_on_off: true,
+        //POST https://iam.cn-north-4.myhuaweicloud.com/v3/auth/tokens
+        tokenUrl: 'https://iam.cn-north-4.myhuaweicloud.com/v3/auth/tokens',
+        //GET https://{endpoint}/v5/iot/{project_id}/devices/{device_id}/shadow
+        shadowUrl: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/shadow',
+        //POST https://{endpoint}/v5/iot/{project_id}/devices/{device_id}/commands
+        commandUrl: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/commands',
+        projectId: 'cn-north-4',  // 项目ID
+        deviceId: '67ed58015367f573f77ef961_esp32',  // 设备ID
+        serviceId: 'gateway_data',  // 服务ID
+        commandName: 'ctrl',  // 命令名称
+
+        // 认证信息
+        authDomain: "odddouglas",  // 主用户名
+        authUser: "iota",         // IAM用户名
+        authPassword: "qgddgls1128", // IAM密码
     },
 
     // 页面生命周期函数
@@ -40,22 +58,22 @@ Page({
     getToken() {
         console.log("开始获取 token...");
         wx.request({
-            url: 'https://iam.cn-north-4.myhuaweicloud.com/v3/auth/tokens',
+            url: this.data.tokenUrl,
             data: JSON.stringify({
                 auth: {
                     identity: {
                         methods: ["password"],
                         password: {
                             user: {
-                                domain: { name: "odddouglas" },
-                                name: "iota",
-                                password: "qgddgls1128"
+                                domain: { name: this.data.authDomain },
+                                name: this.data.authUser,
+                                password: this.data.authPassword
                             }
                         }
                     },
                     scope: {
                         domain: {},
-                        project: { name: "cn-north-4" }
+                        project: { name: this.data.projectId }
                     }
                 }
             }),
@@ -83,7 +101,7 @@ Page({
         const token = wx.getStorageSync('token');
         console.log("当前 token:", token);
         wx.request({
-            url: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/shadow',
+            url: this.data.shadowUrl,
             method: 'GET',
             header: {
                 'content-type': 'application/json',
@@ -114,11 +132,11 @@ Page({
         const token = wx.getStorageSync('token');
         const ledState = this.data.led_on_off;
         wx.request({
-            url: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/commands',
+            url: this.data.commandUrl,
             method: 'POST',
             data: JSON.stringify({
-                service_id: "gateway_data",
-                command_name: "ctrl",
+                service_id: this.data.serviceId,
+                command_name: this.data.commandName,
                 paras: { led_on_off: ledState }
             }),
             header: {
