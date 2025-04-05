@@ -55,7 +55,7 @@ String cmd = ""; // 命令
 long lastMsg = 0;
 
 // 搜索BLE设备回调
-class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
+class BLE_MyAdvertisedDevice_Callbacks : public BLEAdvertisedDeviceCallbacks
 {
 public:
     void onResult(BLEAdvertisedDevice advertisedDevice)
@@ -72,7 +72,7 @@ public:
 };
 
 // BLE客户端与服务器连接与断开回调功能
-class MyClientCallback : public BLEClientCallbacks
+class BLE_MyClient_Callbacks : public BLEClientCallbacks
 {
 public:
     void onConnect(BLEClient *pclient)
@@ -104,34 +104,44 @@ public:
     }
 };
 
-// BLE收到客户端推送的数据时的回调函数
-void NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
+// BLE 初始化函数
+void BLE_Init()
 {
-    // 创建 StaticJsonDocument 对象
-    StaticJsonDocument<200> doc;
+    BLEDevice::init(""); // 初始化BLE设备
 
-    // 尝试将接收到的数据解析为 JSON 格式
-    DeserializationError error = deserializeJson(doc, pData, length);
-
-    // 如果解析失败，输出错误信息
-    if (error)
-    {
-        Serial.print("解析JSON失败: ");
-        Serial.println(error.f_str());
-        return;
-    }
-
-    // 从 JSON 中提取各个字段
-    led_state = doc["led"];         // LED 状态（布尔值）
-    data_temp = doc["temperature"]; // 温度
-    data_humi = doc["humidity"];    // 湿度
-
-    // 打印解析结果
-    Serial.printf("接收到数据:\nLED: %s\n温度: %.2f °C\n湿度: %.2f %%\n", led_state ? "on" : "off", data_temp, data_humi);
+    BLEScan *pBLEScan = BLEDevice::getScan();
+    pBLEScan->setAdvertisedDeviceCallbacks(new BLE_MyAdvertisedDevice_Callbacks()); // 设置设备扫描回调
+    pBLEScan->setActiveScan(true);                                                  // 开启主动扫描
+    pBLEScan->setInterval(100);                                                     // 扫描间隔
+    pBLEScan->setWindow(80);                                                        // 扫描窗口
 }
 
+void BLE_Scan()
+{
+    // 开始扫描设备
+    if (doScan)
+    {
+        Serial.println("开始搜索设备");
+        BLEDevice::getScan()->clearResults(); // 清除上次扫描结果
+        BLEDevice::getScan()->start(0);       // 持续搜索设备
+    }
+
+    // 如果找到设备就尝试一次连接
+    if (doConnect)
+    {
+        if (BLE_Connect())
+        {
+            isConnected = true; // 设置连接状态为已连接
+        }
+        else
+        {
+            doScan = true; // 重新开始扫描
+        }
+        doConnect = false;
+    }
+}
 // 用来连接设备获取其中的服务与特征
-bool ConnectToServer()
+bool BLE_Connect()
 {
     pClient = BLEDevice::createClient(); // 创建客户端实例
     if (!pClient)
@@ -140,7 +150,7 @@ bool ConnectToServer()
         return false;
     }
 
-    pClient->setClientCallbacks(new MyClientCallback()); // 添加客户端连接与断开回调
+    pClient->setClientCallbacks(new BLE_MyClient_Callbacks()); // 添加客户端连接与断开回调
 
     if (!pClient->connect(pServer))
     { // 尝试连接设备
@@ -179,38 +189,13 @@ bool ConnectToServer()
 
     if (pRemoteCharacteristic->canNotify())
     {
-        pRemoteCharacteristic->registerForNotify(NotifyCallback); // 注册通知回调函数
+        pRemoteCharacteristic->registerForNotify(BLE_Notify_Callback); // 注册通知回调函数
     }
 
     return true;
 }
-
-void BLE_Scan()
-{
-    // 开始扫描设备
-    if (doScan)
-    {
-        Serial.println("开始搜索设备");
-        BLEDevice::getScan()->clearResults(); // 清除上次扫描结果
-        BLEDevice::getScan()->start(0);       // 持续搜索设备
-    }
-
-    // 如果找到设备就尝试一次连接
-    if (doConnect)
-    {
-        if (ConnectToServer())
-        {
-            isConnected = true; // 设置连接状态为已连接
-        }
-        else
-        {
-            doScan = true; // 重新开始扫描
-        }
-        doConnect = false;
-    }
-}
 // 发送命令到设备的函数
-void sendCommand()
+void BLE_Send_CMD()
 {
     if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
     {
@@ -219,17 +204,32 @@ void sendCommand()
         doSend = false;                                                 // 重置 doSend 状态为 false
     }
 }
-// BLE 初始化函数
-void BLE_Init()
+// BLE收到客户端推送的数据时的回调函数
+void BLE_Notify_Callback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
-    BLEDevice::init(""); // 初始化BLE设备
+    // 创建 StaticJsonDocument 对象
+    StaticJsonDocument<200> doc;
 
-    BLEScan *pBLEScan = BLEDevice::getScan();
-    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks()); // 设置设备扫描回调
-    pBLEScan->setActiveScan(true);                                             // 开启主动扫描
-    pBLEScan->setInterval(100);                                                // 扫描间隔
-    pBLEScan->setWindow(80);                                                   // 扫描窗口
+    // 尝试将接收到的数据解析为 JSON 格式
+    DeserializationError error = deserializeJson(doc, pData, length);
+
+    // 如果解析失败，输出错误信息
+    if (error)
+    {
+        Serial.print("解析JSON失败: ");
+        Serial.println(error.f_str());
+        return;
+    }
+
+    // 从 JSON 中提取各个字段
+    led_state = doc["led"];         // LED 状态（布尔值）
+    data_temp = doc["temperature"]; // 温度
+    data_humi = doc["humidity"];    // 湿度
+
+    // 打印解析结果
+    Serial.printf("接收到数据:\nLED: %s\n温度: %.2f °C\n湿度: %.2f %%\n", led_state ? "on" : "off", data_temp, data_humi);
 }
+
 void WIFI_Init()
 {
     WiFi.begin(ssid, password);
@@ -248,7 +248,7 @@ void MQTT_Init()
 {
     client.setServer(mqttServer, mqttPort);
     client.setKeepAlive(60);
-    client.setCallback(handleCommand); // 设置命令回调函数
+    client.setCallback(MQTT_CMD_Callback); // 设置命令回调函数
 
     Serial.println("[MQTT] Connecting to Huawei Cloud...");
 
@@ -316,7 +316,7 @@ void MQTT_Respond(String topic, String result)
 }
 
 // 命令回调函数：处理平台下发的命令
-void handleCommand(char *topic, byte *payload, unsigned int length)
+void MQTT_CMD_Callback(char *topic, byte *payload, unsigned int length)
 {
     StaticJsonDocument<256> doc; // 创建静态 JSON 文档用于解析
 
@@ -359,6 +359,7 @@ void setup()
 
 void loop()
 {
+    BLE_Scan(); // 尝试扫描并连接BLE
     if (!client.connected())
     {
         MQTT_Init();
@@ -367,7 +368,7 @@ void loop()
     {
         client.loop();
     }
-    BLE_Scan(); // 尝试扫描并连接BLE
+
     long now = millis();
     if (now - lastMsg > 1000)
     { // 每 10 秒上报一次
@@ -377,6 +378,6 @@ void loop()
     // 如果已经连接，发送命令
     if (isConnected && doSend)
     {
-        sendCommand(); // 调用 sendCommand 函数发送命令
+        BLE_Send_CMD(); // 调用 BLE_Send_CMD 函数发送命令
     }
 }

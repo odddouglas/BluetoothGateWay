@@ -26,14 +26,14 @@ BLECharacteristic *pCharacteristic;
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
 // BLE服务器连接回调
-class MyServerCallbacks : public BLEServerCallbacks
+class BLE_MyServer_Callbacks : public BLEServerCallbacks
 {
     void onConnect(BLEServer *pServer) { isConnected = true; }
     void onDisconnect(BLEServer *pServer) { isConnected = false; }
 };
 
 // BLE特征写入回调
-class MyCallbacks : public BLECharacteristicCallbacks
+class BLE_Characteristic_RX_Callbacks : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic *pCharacteristic)
     {
@@ -63,7 +63,7 @@ void BLE_Init()
 {
     BLEDevice::init("ESP32-BLE");
     BLEServer *pServer = BLEDevice::createServer();
-    pServer->setCallbacks(new MyServerCallbacks());
+    pServer->setCallbacks(new BLE_MyServer_Callbacks());
 
     BLEService *pService = pServer->createService(SERVICE_UUID);
 
@@ -75,7 +75,7 @@ void BLE_Init()
     BLECharacteristic *pCharacteristic_RX = pService->createCharacteristic(
         CHARACTERISTIC_UUID_RX,
         BLECharacteristic::PROPERTY_WRITE);
-    pCharacteristic_RX->setCallbacks(new MyCallbacks());
+    pCharacteristic_RX->setCallbacks(new BLE_Characteristic_RX_Callbacks());
 
     pService->start();
     pServer->getAdvertising()->start();
@@ -84,7 +84,7 @@ void BLE_Init()
 }
 
 // 发送数据的函数
-void sendData()
+void BLE_SendData()
 {
     if (isConnected)
     {
@@ -107,23 +107,19 @@ void sendData()
 // 读取DHT传感器的函数
 void DHT_Read()
 {
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
 
-
-        float h = dht.readHumidity();
-        float t = dht.readTemperature();
-
-        if (isnan(h) || isnan(t))
-        {
-            Serial.println("读取DHT传感器失败");
-        }
-        else
-        {
-            data_humi = h;
-            data_temp = t;
-
-            Serial.printf("湿度: %.2f %%\t 温度: %.2f °C\n", data_humi, data_temp);
-        }
-    
+    if (isnan(h) || isnan(t))
+    {
+        Serial.println("读取DHT传感器失败");
+    }
+    else
+    {
+        data_humi = h;
+        data_temp = t;
+        Serial.printf("湿度: %.2f %%\t 温度: %.2f °C\n", data_humi, data_temp);
+    }
 }
 
 void setup()
@@ -133,13 +129,13 @@ void setup()
     pinMode(12, OUTPUT);
     dht.begin();
     delay(2000); // DHT传感器的稳定时间
-    BLE_Init(); // 初始化BLE
+    BLE_Init();  // 初始化BLE
 }
 
 void loop()
 {
     DHT_Read(); // 读取DHT传感器
-    sendData(); // 发送数据
+    BLE_SendData(); // 发送数据
 
     // 控制LED状态
     if (led_state)

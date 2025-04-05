@@ -6,6 +6,7 @@
         "*.wxs": "javascript",
         "compare": "cpp",
         "bitset": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "new": "cpp"
     }
 }
