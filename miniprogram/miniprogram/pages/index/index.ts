@@ -7,17 +7,8 @@ Page({
     onLoad() {
         console.log("页面 onLoad");
     },
-    onReady() {
-        console.log("页面 onReady");
-    },
     onShow() {
         console.log("页面 onShow");
-    },
-    onHide() {
-        console.log("页面 onHide");
-    },
-    onUnload() {
-        console.log("页面 onUnload");
     },
 
     // 开关变化
@@ -87,6 +78,7 @@ Page({
 
     // 获取设备影子
     getShadow() {
+        let that = this;  //异步
         console.log("开始获取影子");
         const token = wx.getStorageSync('token');
         console.log("当前 token:", token);
@@ -101,6 +93,11 @@ Page({
                 console.log("获取影子成功");
                 const shadow = res.data.shadow[0]?.reported?.properties || {};
                 console.log("影子数据：", shadow);
+                that.setData({
+                    temperature: shadow.temperature || 0,
+                    humidity: shadow.humidity || 0,
+                    led_on_off: shadow.led || false
+                });
             },
             fail() {
                 console.log("获取影子失败");
