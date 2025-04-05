@@ -27,8 +27,8 @@ const char *mqttPassword = "106025bd4390a90b15da1f4aa5c4da6eabc5751bb4efcc166094
 #define MQTT_TOPIC_COMMAND_RESPOND "$oc/devices/" DEVICE_ID "/sys/commands/response/request_id="
 
 // 模拟数据
-int data_temp = 25;
-int data_humi = 60;
+float data_temp = 25.0;
+float data_humi = 60.0;
 bool led_state = true;
 
 long lastMsg = 0;
@@ -108,8 +108,8 @@ void MQTT_POST()
   char jsonBuf[256];
   snprintf(jsonBuf, sizeof(jsonBuf),
            "{\"services\":[{\"service_id\":\"gateway_data\",\"properties\":{"
-           "\"temperature\":%d,"
-           "\"humidity\":%d,"
+           "\"temperature\":%.2f,"
+           "\"humidity\":%.2f,"
            "\"led\":%s"
            "}}]}",
            data_temp, data_humi, led_state ? "true" : "false");
