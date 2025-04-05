@@ -28,6 +28,9 @@ Page({
     },
     onShow() {
         console.log("页面 onShow");
+        this.timer = setInterval(() => {
+            this.getShadow();
+        }, 500); // 每0.5秒获取一次
     },
 
     // 开关变化
@@ -46,7 +49,6 @@ Page({
 
     // 按钮2：获取设备影子
     handleButton2(e) {
-        this.getShadow();
         console.log(e);
     },
 
@@ -96,7 +98,6 @@ Page({
         let that = this;  //异步
         console.log("开始获取影子");
         const token = wx.getStorageSync('token');
-        console.log("当前 token:", token);
         wx.request({
             url: this.data.shadowUrl,
             method: 'GET',
@@ -107,7 +108,6 @@ Page({
             success(res) {
                 console.log("获取影子成功");
                 const shadow = res.data.shadow[0]?.reported?.properties || {};
-                console.log("影子数据：", shadow);
                 that.setData({
                     temperature: shadow.temperature || 0,
                     humidity: shadow.humidity || 0,
