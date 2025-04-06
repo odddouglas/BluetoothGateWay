@@ -6,9 +6,13 @@ Page({
         temperature: 0.0,
         humidity: 0.0,
         led_state: false,
+        ble: [0],
+
         led_on_off: false,
         isRealTime: false, // 是否为实时数据
-        connectionStatus: '设备状态: 未连接', // 连接状态
+        mqtt_state: '设备状态: 未连接', // mqtt连接状态
+        ble_state: '设备状态: 未连接', // ble连接状态
+
         buttonTheme: 'default',  // 按钮主题，默认灰色
         buttonText: '未获取认证',  // 按钮文本，默认显示“未获取认证”
         // URL 配置
@@ -122,7 +126,7 @@ Page({
                 if (status === "ONLINE") {
                     this.setData({
                         isRealTime: true,
-                        connectionStatus: '设备状态: 在线'
+                        mqtt_state: '设备状态: 在线'
                     });
                     wx.showToast({ title: '设备在线', icon: 'success', duration: 1500 });
 
@@ -134,7 +138,7 @@ Page({
                 } else {
                     this.setData({
                         isRealTime: false,
-                        connectionStatus: '设备状态: 离线'
+                        mqtt_state: '设备状态: 离线'
                     });
                     wx.showToast({ title: '设备不在线，仅显示设备离线前最后一次数据', icon: 'none', duration: 2000 });
                     this.getShadow(); // 获取一次影子，作为上次在线数据
@@ -164,6 +168,10 @@ Page({
                     temperature: props.temperature || 0,
                     humidity: props.humidity || 0,
                     led_state: props.led || false,
+                    ble: props.ble || [],
+                    ble_state: (props.ble[0] === "true")
+                        ? `设备状态: 已连接 (${props.ble[1] || 'BLE设备'})`
+                        : '设备状态: 未连接'
                 });
             }
         });

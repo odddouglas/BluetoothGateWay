@@ -10,7 +10,8 @@
     <t-switch bindchange="handleChange1" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
 </t-cell>
 <t-divider content="设备连接情况" />
-<t-cell title="网关" hover note="{{connectionStatus}}" arrow />
+<t-cell title="网关" hover note="{{mqtt_state}}" arrow />
+<t-cell title="节点" hover note="{{ble_state}}" arrow />
 <view class="button-example">
     <t-button bindtap="handleButton1" theme="{{buttonTheme}}" block size="large" t-class="group-btn">
         {{buttonText}}

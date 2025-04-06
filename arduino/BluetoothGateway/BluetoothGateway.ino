@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+// 上报设备属性
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -56,6 +57,158 @@ String ble_name = "";   // 已连接的蓝牙名称
 String cmd = "";        // 收发的命令
 long last = 0;          // 用于定时发报
 
+void WIFI_Init()
+{
+    WiFi.begin(ssid, password);
+    Serial.print("Connecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println();
+    Serial.println("WiFi connected");
+    Serial.println(WiFi.localIP());
+}
+
+void MQTT_Init()
+{
+    client.setServer(mqttServer, mqttPort);
+    client.setKeepAlive(60);
+    client.setCallback(MQTT_CmdCallback); // 设置命令回调函数
+
+    Serial.println("[MQTT] Connecting to Huawei Cloud...");
+
+    while (!client.connected())
+    {
+        boolean result = client.connect(ClientId, mqttUser, mqttPassword);
+
+        Serial.println(result ? "[MQTT] Connected to Broker!" : "[MQTT] Connection Failed!");
+        if (result)
+        {
+            // 订阅命令下发 Topic
+            boolean subResult = client.subscribe(MQTT_TOPIC_COMMAND);
+            Serial.println("[MQTT] Subscribe to Command Topic:");
+            Serial.println(subResult ? "Subscribe Success!" : "Subscribe Failed!");
+        }
+        else
+        {
+            Serial.print("[MQTT] Failed State Code: ");
+            Serial.println(client.state());
+            delay(3000); // 等待后重连
+        }
+    }
+}
+void MQTT_Scan()
+{
+    if (!client.connected())
+    {
+        MQTT_Init();
+    }
+    else
+    {
+        client.loop();
+    }
+}
+
+void MQTT_Report()
+{
+    // 创建一个 JSON 文档对象
+    StaticJsonDocument<256> doc;
+
+    // 填充 JSON 数据
+    doc["services"][0]["service_id"] = SERVER_ID;
+    doc["services"][0]["properties"]["temperature"] = data_temp;
+    doc["services"][0]["properties"]["humidity"] = data_humi;
+    doc["services"][0]["properties"]["led"] = led_state ? "true" : "false";
+    // 添加 ble stringlist 属性
+    JsonArray bleArray = doc["services"][0]["properties"].createNestedArray("ble");
+    bleArray.add(isConnected ? "true" : "false");
+    bleArray.add(isConnected ? ble_name : "");
+
+    // 将 JSON 数据序列化为字符串
+    String jsonString;
+    serializeJson(doc, jsonString); // 序列化 JSON 为字符串
+
+    // 发布到华为云平台
+    boolean reportResult = client.publish(MQTT_TOPIC_REPORT, jsonString.c_str());
+    Serial.println("[MQTT] Publish:");
+    Serial.println(jsonString);
+    Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
+}
+
+// 蓝牙连接状态上报
+void MQTT_Send()
+{
+    StaticJsonDocument<200> doc;
+    doc["content"]["ble_status"] = isConnected; // 连接状态 (connected / disconnected)
+    doc["content"]["device_name"] = ble_name;   // 设备名称
+
+    String jsonString;
+    serializeJson(doc, jsonString); // 转换为 JSON 字符串
+
+    // 发布到消息上报 Topic
+    boolean reportResult = client.publish(MQTT_TOPIC_MESSAGE_UP, jsonString.c_str());
+    Serial.println("[MQTT] Bluetooth connection status published:");
+    Serial.println(jsonString);
+    Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
+}
+
+// 发送命令响应到平台
+void MQTT_Respond(String topic, String result)
+{
+    // 构造响应 JSON 数据
+    char jsonBuf[128];
+    snprintf(jsonBuf, sizeof(jsonBuf),
+             "{\"result_code\":0,\"response_name\":\"COMMAND_RESPONSE\",\"paras\":{\"result\":\"%s\"}}",
+             result.c_str());
+
+    // 从 topic 中提取 request_id
+    int idIndex = topic.lastIndexOf("request_id=");
+    String requestId = (idIndex >= 0) ? topic.substring(idIndex + 11) : "";
+
+    // 构造响应的 topic
+    String responseTopic = MQTT_TOPIC_COMMAND_RESPOND + requestId;
+    // 发布命令响应
+    boolean respondResult = client.publish(responseTopic.c_str(), jsonBuf);
+    Serial.println("[MQTT] Publish (Command Response):");
+    Serial.println(jsonBuf);
+    Serial.println(respondResult ? "Publish Success!" : "Publish Failed!");
+}
+
+// 命令回调函数：处理平台下发的命令
+void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
+{
+    StaticJsonDocument<256> doc; // 创建静态 JSON 文档用于解析
+
+    DeserializationError error = deserializeJson(doc, payload, length); // 解析接收到的 JSON 数据
+    if (error)
+    {
+        Serial.println("Failed to parse JSON"); // 打印解析失败信息
+        return;                                 // 退出处理函数
+    }
+
+    String payloadStr = ""; // 用于打印接收到的原始 JSON 字符串
+    for (unsigned int i = 0; i < length; i++)
+    {
+        payloadStr += (char)payload[i]; // 字节流转换为字符串
+    }
+    Serial.println("Received command: " + payloadStr); // 打印接收到的命令
+
+    String commandName = doc["command_name"]; // 获取命令名称字段
+
+    if (commandName == "ctrl") // 判断是否为控制命令
+    {
+        bool state = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
+        cmd = (state ? "ON" : "OFF");            // 更新命令
+        MQTT_Respond(String(topic), "success");  // 回复命令成功
+        doSend = true;
+    }
+    else
+    {
+        MQTT_Respond(String(topic), "failure"); // 命令无效，回复失败
+    }
+}
 // 搜索BLE设备回调
 class BLE_MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
@@ -79,6 +232,7 @@ class BLE_MyClientCallbacks : public BLEClientCallbacks
 public:
     void onConnect(BLEClient *pclient)
     {
+        ble_name = pServer->getName().c_str(); // 获取蓝牙名称
         isConnected = true;
         Serial.println("连接设备成功");
         // 设置MTU大小
@@ -123,6 +277,7 @@ void BLE_Scan()
     // 开始扫描设备
     if (doScan)
     {
+        MQTT_Report(); // 上传一次，确保更新ble的状态上云
         Serial.println("开始搜索设备");
         BLEDevice::getScan()->clearResults(); // 清除上次扫描结果
         BLEDevice::getScan()->start(0);       // 持续搜索设备
@@ -130,18 +285,19 @@ void BLE_Scan()
 
     // 如果找到设备就尝试一次连接
     if (doConnect)
-    {
+
         if (BLE_Connect())
         {
             isConnected = true; // 设置连接状态为已连接
         }
         else
         {
+            Serial.println("连接设备失败");
             doScan = true; // 重新开始扫描
         }
-        doConnect = false; // 完成连接
-    }
+    doConnect = false; // 完成连接
 }
+
 // 用来连接设备获取其中的服务与特征
 bool BLE_Connect()
 {
@@ -233,157 +389,6 @@ void BLE_NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8
 
     // 打印解析结果
     Serial.printf("接收到数据:\nLED: %s\n温度: %.2f °C\n湿度: %.2f %%\n", led_state ? "on" : "off", data_temp, data_humi);
-}
-
-void WIFI_Init()
-{
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi");
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println();
-    Serial.println("WiFi connected");
-    Serial.println(WiFi.localIP());
-}
-
-void MQTT_Init()
-{
-    client.setServer(mqttServer, mqttPort);
-    client.setKeepAlive(60);
-    client.setCallback(MQTT_CmdCallback); // 设置命令回调函数
-
-    Serial.println("[MQTT] Connecting to Huawei Cloud...");
-
-    while (!client.connected())
-    {
-        boolean result = client.connect(ClientId, mqttUser, mqttPassword);
-
-        Serial.println(result ? "[MQTT] Connected to Broker!" : "[MQTT] Connection Failed!");
-        if (result)
-        {
-            // 订阅命令下发 Topic
-            boolean subResult = client.subscribe(MQTT_TOPIC_COMMAND);
-            Serial.println("[MQTT] Subscribe to Command Topic:");
-            Serial.println(subResult ? "Subscribe Success!" : "Subscribe Failed!");
-        }
-        else
-        {
-            Serial.print("[MQTT] Failed State Code: ");
-            Serial.println(client.state());
-            delay(3000); // 等待后重连
-        }
-    }
-}
-void MQTT_Scan()
-{
-    if (!client.connected())
-    {
-        MQTT_Init();
-    }
-    else
-    {
-        client.loop();
-    }
-}
-// 上报设备属性
-#include <ArduinoJson.h> // 导入 ArduinoJson 库
-
-void MQTT_Report()
-{
-    // 创建一个 JSON 文档对象
-    StaticJsonDocument<256> doc;
-
-    // 填充 JSON 数据
-    doc["services"][0]["service_id"] = SERVER_ID;
-    doc["services"][0]["properties"]["temperature"] = data_temp;
-    doc["services"][0]["properties"]["humidity"] = data_humi;
-    doc["services"][0]["properties"]["led"] = led_state ? "true" : "false";
-
-    // 将 JSON 数据序列化为字符串
-    String jsonString;
-    serializeJson(doc, jsonString); // 序列化 JSON 为字符串
-
-    // 发布到华为云平台
-    boolean reportResult = client.publish(MQTT_TOPIC_REPORT, jsonString.c_str());
-    Serial.println("[MQTT] Publish:");
-    Serial.println(jsonString);
-    Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
-}
-
-// 蓝牙连接状态上报
-void MQTT_Send()
-{
-    StaticJsonDocument<200> doc;
-    doc["content"]["ble_status"] = isConnected; // 连接状态 (connected / disconnected)
-    doc["content"]["device_name"] = ble_name;   // 设备名称
-
-    String jsonString;
-    serializeJson(doc, jsonString); // 转换为 JSON 字符串
-
-    // 发布到消息上报 Topic
-    boolean reportResult = client.publish(MQTT_TOPIC_MESSAGE_UP, jsonString.c_str());
-    Serial.println("[MQTT] Bluetooth connection status published:");
-    Serial.println(jsonString);
-    Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
-}
-
-// 发送命令响应到平台
-void MQTT_Respond(String topic, String result)
-{
-    // 构造响应 JSON 数据
-    char jsonBuf[128];
-    snprintf(jsonBuf, sizeof(jsonBuf),
-             "{\"result_code\":0,\"response_name\":\"COMMAND_RESPONSE\",\"paras\":{\"result\":\"%s\"}}",
-             result.c_str());
-
-    // 从 topic 中提取 request_id
-    int idIndex = topic.lastIndexOf("request_id=");
-    String requestId = (idIndex >= 0) ? topic.substring(idIndex + 11) : "";
-
-    // 构造响应的 topic
-    String responseTopic = MQTT_TOPIC_COMMAND_RESPOND + requestId;
-    // 发布命令响应
-    boolean respondResult = client.publish(responseTopic.c_str(), jsonBuf);
-    Serial.println("[MQTT] Publish (Command Response):");
-    Serial.println(jsonBuf);
-    Serial.println(respondResult ? "Publish Success!" : "Publish Failed!");
-}
-
-// 命令回调函数：处理平台下发的命令
-void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
-{
-    StaticJsonDocument<256> doc; // 创建静态 JSON 文档用于解析
-
-    DeserializationError error = deserializeJson(doc, payload, length); // 解析接收到的 JSON 数据
-    if (error)
-    {
-        Serial.println("Failed to parse JSON"); // 打印解析失败信息
-        return;                                 // 退出处理函数
-    }
-
-    String payloadStr = ""; // 用于打印接收到的原始 JSON 字符串
-    for (unsigned int i = 0; i < length; i++)
-    {
-        payloadStr += (char)payload[i]; // 字节流转换为字符串
-    }
-    Serial.println("Received command: " + payloadStr); // 打印接收到的命令
-
-    String commandName = doc["command_name"]; // 获取命令名称字段
-
-    if (commandName == "ctrl") // 判断是否为控制命令
-    {
-        bool state = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
-        cmd = (state ? "ON" : "OFF");            // 更新命令
-        MQTT_Respond(String(topic), "success");  // 回复命令成功
-        doSend = true;
-    }
-    else
-    {
-        MQTT_Respond(String(topic), "failure"); // 命令无效，回复失败
-    }
 }
 void setup()
 {
