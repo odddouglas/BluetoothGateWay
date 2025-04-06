@@ -12,10 +12,7 @@
 <t-divider content="设备连接情况" />
 <t-cell title="网关" hover note="{{connectionStatus}}" arrow />
 <view class="button-example">
-    <t-button bindtap="handleButton2" theme="default" block size="large" t-class="group-btn">
-        xxxx
+    <t-button bindtap="handleButton1" theme="{{buttonTheme}}" block size="large" t-class="group-btn">
+        {{buttonText}}
     </t-button>
-</view>
-<view class="button-example">
-    <t-button bindtap="handleButton1" theme="primary" size="large" block>获取云认证</t-button>
 </view>

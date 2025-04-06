@@ -7,7 +7,8 @@ Page({
         led_on_off: true,
         isRealTime: false, // 是否为实时数据
         connectionStatus: '设备状态: 未连接', // 连接状态
-
+        buttonTheme: 'default',  // 按钮主题，默认灰色
+        buttonText: '未获取认证',  // 按钮文本，默认显示“未获取认证”
         // URL 配置
         tokenUrl: 'https://iam.cn-north-4.myhuaweicloud.com/v3/auth/tokens',
         shadowUrl: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/shadow',
@@ -26,9 +27,11 @@ Page({
 
     onLoad() {
         console.log("页面 onLoad");
+        this.getToken();
     },
     onShow() {
         console.log("页面 onShow");
+        this.checkDeviceStatus();
     },
     onHide() {
         clearInterval(this.timer);
@@ -48,7 +51,15 @@ Page({
     },
 
     getToken() {
-        console.log("开始获取 token...");
+        const token = wx.getStorageSync('token');
+        if (token) {
+            this.setData({
+                buttonTheme: 'primary',  // 按钮变蓝
+                buttonText: '认证成功',  // 显示认证成功文本
+            });
+            wx.showToast({ title: '已经完成认证，无需程重复验证', icon: 'none', duration: 2000 });
+            return;
+        } //如果有了就无需重复获取，区别于其他需要token的函数
         wx.request({
             url: this.data.tokenUrl,
             method: 'POST',
@@ -74,10 +85,12 @@ Page({
             success: (res) => {
                 const token = res.header['X-Subject-Token'];
                 wx.setStorageSync('token', token);
-                wx.showToast({ title: '认证成功', icon: 'success', duration: 1500 });
-
+                this.setData({
+                    buttonTheme: 'primary',  // 按钮变蓝
+                    buttonText: '认证成功',  // 显示认证成功文本
+                });
                 // 获取设备在线状态
-                this.checkDeviceStatus(token);
+                this.checkDeviceStatus();
             },
             fail() {
                 wx.showToast({ title: '认证失败', icon: 'none', duration: 2000 });
@@ -89,7 +102,9 @@ Page({
     },
 
     // 检查设备是否在线
-    checkDeviceStatus(token) {
+    checkDeviceStatus() {
+        const token = wx.getStorageSync('token');
+        if (!token) return;
         wx.request({
             url: this.data.deviceUrl,
             method: 'GET',
