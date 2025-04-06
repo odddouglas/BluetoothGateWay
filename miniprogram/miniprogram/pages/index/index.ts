@@ -1,5 +1,7 @@
 Page({
     data: {
+        // 说明书面板标志位
+        collapse_val: [0],
         // 设备属性
         temperature: 0.0,
         humidity: 0.0,
@@ -40,11 +42,13 @@ Page({
         clearInterval(this.timer);
     },
 
-    handleChange(e) {
+    handleChange1(e) {
         this.setData({ led_on_off: e.detail.value });
         this.setCommand();
     },
-
+    handleChange2(e) {
+        this.setData({ collapse_val: e.detail.value });
+    },
     // 获取 token 并认证成功后进行判断
     handleButton1() {
         this.getToken();

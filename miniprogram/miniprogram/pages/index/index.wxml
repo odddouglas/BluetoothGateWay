@@ -7,7 +7,7 @@
 </t-cell>
 <t-divider content="LED控制面板" />
 <t-cell title="LED">
-    <t-switch bindchange="handleChange" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
+    <t-switch bindchange="handleChange1" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
 </t-cell>
 <t-divider content="设备连接情况" />
 <t-cell title="网关" hover note="{{connectionStatus}}" arrow />
@@ -15,4 +15,12 @@
     <t-button bindtap="handleButton1" theme="{{buttonTheme}}" block size="large" t-class="group-btn">
         {{buttonText}}
     </t-button>
+</view>
+<view class="wrapper">
+    <t-collapse value="{{collapse_val}}" bind:change="handleChange2">
+        <t-collapse-panel header="连接说明" value="{{0}}" expandIcon>
+            设备与平台之间的连接断开1分钟后(数据自动刷新周期为1分钟)置为“离线”状态.
+            在线可以实时显示(网关设备上电),但是离线需要等待一分钟(网关设备断电)
+        </t-collapse-panel>
+    </t-collapse>
 </view>

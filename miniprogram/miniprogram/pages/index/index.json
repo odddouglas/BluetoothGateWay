@@ -1,12 +1,14 @@
 {
-  "component": true,
-  "styleIsolation": "shared",
-  "usingComponents": {
-    "t-cell": "tdesign-miniprogram/cell/cell",
-    "t-divider": "tdesign-miniprogram/divider/divider",
-    "t-badge": "tdesign-miniprogram/badge/badge",
-    "t-icon": "tdesign-miniprogram/icon/icon",
-    "t-switch": "tdesign-miniprogram/switch/switch",
-    "t-button": "tdesign-miniprogram/button/button"
-  }
+    "component": true,
+    "styleIsolation": "shared",
+    "usingComponents": {
+        "t-cell": "tdesign-miniprogram/cell/cell",
+        "t-divider": "tdesign-miniprogram/divider/divider",
+        "t-badge": "tdesign-miniprogram/badge/badge",
+        "t-icon": "tdesign-miniprogram/icon/icon",
+        "t-switch": "tdesign-miniprogram/switch/switch",
+        "t-button": "tdesign-miniprogram/button/button",
+        "t-collapse": "tdesign-miniprogram/collapse/collapse",
+        "t-collapse-panel": "tdesign-miniprogram/collapse-panel/collapse-panel"
+    }
 }
