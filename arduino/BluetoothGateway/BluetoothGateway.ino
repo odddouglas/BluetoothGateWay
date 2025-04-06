@@ -29,6 +29,7 @@ const char *mqttPassword = "106025bd4390a90b15da1f4aa5c4da6eabc5751bb4efcc166094
 // 设备订阅命令的 topic
 #define MQTT_TOPIC_COMMAND "$oc/devices/" DEVICE_ID "/sys/commands/#"
 #define MQTT_TOPIC_COMMAND_RESPOND "$oc/devices/" DEVICE_ID "/sys/commands/response/request_id="
+#define MQTT_TOPIC_MESSAGE_UP "$oc/devices/" DEVICE_ID "/sys/messages/up"
 
 // 蓝牙相关定义
 BLECharacteristic *pCharacteristic;
@@ -50,9 +51,9 @@ BLEClient *pClient = nullptr;                               // 客户端实例
 float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
 bool led_state = false; // LED 状态变量
-
-String cmd = ""; // 命令
-long last = 0;   // 用于定时发报
+String ble_name = "";   // 已连接的蓝牙名称
+String cmd = "";        // 收发的命令
+long last = 0;          // 用于定时发报
 
 // 搜索BLE设备回调
 class BLE_MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
@@ -65,7 +66,7 @@ public:
             advertisedDevice.getScan()->stop();                  // 停止当前扫描
             pServer = new BLEAdvertisedDevice(advertisedDevice); // 暂存设备
             doScan = false;
-            doConnect = true;
+            doConnect = true; // 准备连接
             Serial.println("发现想要连接的设备");
         }
     }
@@ -137,7 +138,7 @@ void BLE_Scan()
         {
             doScan = true; // 重新开始扫描
         }
-        doConnect = false;
+        doConnect = false; // 完成连接
     }
 }
 // 用来连接设备获取其中的服务与特征
@@ -287,22 +288,44 @@ void MQTT_Scan()
     }
 }
 // 上报设备属性
+#include <ArduinoJson.h> // 导入 ArduinoJson 库
+
 void MQTT_Report()
 {
-    // 构造 JSON 数据（注意服务 ID 和属性结构）
-    char jsonBuf[256];
-    snprintf(jsonBuf, sizeof(jsonBuf),
-             "{\"services\":[{\"service_id\":\"%s\",\"properties\":{"
-             "\"temperature\":%.2f,"
-             "\"humidity\":%.2f,"
-             "\"led\":%s"
-             "}}]}",
-             SERVER_ID, data_temp, data_humi, led_state ? "true" : "false");
+    // 创建一个 JSON 文档对象
+    StaticJsonDocument<256> doc;
+
+    // 填充 JSON 数据
+    doc["services"][0]["service_id"] = SERVER_ID;
+    doc["services"][0]["properties"]["temperature"] = data_temp;
+    doc["services"][0]["properties"]["humidity"] = data_humi;
+    doc["services"][0]["properties"]["led"] = led_state ? "true" : "false";
+
+    // 将 JSON 数据序列化为字符串
+    String jsonString;
+    serializeJson(doc, jsonString); // 序列化 JSON 为字符串
 
     // 发布到华为云平台
-    boolean reportResult = client.publish(MQTT_TOPIC_REPORT, jsonBuf);
+    boolean reportResult = client.publish(MQTT_TOPIC_REPORT, jsonString.c_str());
     Serial.println("[MQTT] Publish:");
-    Serial.println(jsonBuf);
+    Serial.println(jsonString);
+    Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
+}
+
+// 蓝牙连接状态上报
+void MQTT_Send()
+{
+    StaticJsonDocument<200> doc;
+    doc["content"]["status"] = isConnected;   // 连接状态 (connected / disconnected)
+    doc["content"]["device_name"] = ble_name; // 设备名称
+
+    String jsonString;
+    serializeJson(doc, jsonString); // 转换为 JSON 字符串
+
+    // 发布到消息上报 Topic
+    boolean reportResult = client.publish(MQTT_TOPIC_MESSAGE_UP, jsonString.c_str());
+    Serial.println("[MQTT] Bluetooth connection status published:");
+    Serial.println(jsonString);
     Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
 }
 
@@ -364,16 +387,16 @@ void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
 void setup()
 {
     Serial.begin(115200);
-    delay(100); // 等待串口初始化
-    WIFI_Init();
-    MQTT_Init();
-    BLE_Init(); // 初始化BLE设备
+    delay(100);  // 等待串口初始化
+    WIFI_Init(); // 等待wifi连接
+    MQTT_Init(); // 初始化MQTT尝试连接
+    BLE_Init();  // 初始化BLE设备
 }
 
 void loop()
 {
     BLE_Scan();  // 尝试扫描并连接BLE
-    MQTT_Scan(); // 尝试扫描并连接云
+    MQTT_Scan(); // 尝试扫描并连接云，如果没有连接将会一直client.loop
 
     long now = millis();
     if (now - last > 1000)
