@@ -1,27 +1,41 @@
-<t-divider content="温湿度监测面板" />
+<t-divider content="监测面板" />
 <t-cell title="温度" arrow>
-    <!-- 判断 MQTT 是否连接，如果没有连接显示 'outofdate' -->
-    <view slot="note" class="cell-note-bold">{{mqtt_on_off_line ? temperature : 'outofdate'}}</view>
+    <view slot="note" class="cell-note-bold">
+        {{mqtt_on_off_line&&ble_on_off_line ? temperature : 'outofdate'}}
+    </view>
 </t-cell>
 <t-cell title="湿度" arrow>
-    <!-- 判断 MQTT 是否连接，如果没有连接显示 'outofdate' -->
-    <view slot="note" class="cell-note-bold">{{mqtt_on_off_line ? humidity : 'outofdate'}}</view>
+    <view slot="note" class="cell-note-bold">
+        {{mqtt_on_off_line&&ble_on_off_line  ? humidity : 'outofdate'}}
+    </view>
 </t-cell>
-<t-divider content="LED控制面板" />
+<t-cell title="LED" arrow>
+    <view slot="note" class="cell-note-bold">
+        {{mqtt_on_off_line&&ble_on_off_line  ? led_state : 'outofdate'}}
+    </view>
+</t-cell>
+<t-divider content="控制面板" />
 <t-cell title="LED">
     <t-switch bindchange="handleChange1" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
 </t-cell>
-<t-divider content="设备连接情况" />
-<t-cell bindtap="handleCell1" title="网关" hover note="{{mqtt_on_off_line ? mqtt_state : ''}}" arrow />
-<!-- 判断 MQTT 状态，设备未连接时清空节点面板 -->
-<t-cell bindtap="handleCell2" title="节点" hover note="{{mqtt_on_off_line ? ble_state : ''}}" arrow />
+<t-cell title="BLE">
+    <t-switch bindchange="handleChange2" value="{{ble_on_off}}" label="{{['开', '关']}}" slot="note" />
+</t-cell>
+<view class="button-example">
+    <t-button bindtap="handleButton2" theme="default" block size="large" t-class="group-btn">
+        下发命令
+    </t-button>
+</view>
+<t-divider content="设备情况" />
+<t-cell bindtap="handleCell1" title="网关" hover note="{{mqtt_on_off_line ? mqttStatus : ''}}" arrow />
+<t-cell bindtap="handleCell2" title="节点" hover note="{{mqtt_on_off_line ? bleStatus : ''}}" arrow />
 <view class="button-example">
     <t-button bindtap="handleButton1" theme="{{buttonTheme}}" block size="large" t-class="group-btn">
         {{buttonText}}
     </t-button>
 </view>
 <view class="wrapper">
-    <t-collapse value="{{collapse_val}}" bind:change="handleChange2">
+    <t-collapse value="{{collapse_val}}" bind:change="handleChange3">
         <t-collapse-panel header="连接说明" value="{{0}}" expandIcon>
             <view>- 网关设备与平台之间的连接断开1分钟后(数据自动刷新周期为1分钟)置为“离线”状态。</view>
             <view>- 网关在线可以实时显示(网关设备上电)，但是离线需要等待一分钟(网关设备断电)。</view>

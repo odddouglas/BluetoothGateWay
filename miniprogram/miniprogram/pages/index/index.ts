@@ -9,10 +9,12 @@ Page({
         ble: [0],
 
         led_on_off: false,
+        ble_on_off: true,
+
         mqtt_on_off_line: false, // 是否为实时数据
-        mqtt_state: '未连接到云', // mqtt连接状态
+        mqttStatus: '未连接到云', // mqtt连接状态
         ble_on_off_line: false,
-        ble_state: '离线', // ble连接状态
+        bleStatus: '离线', // ble连接状态
 
         buttonTheme: 'default',  // 按钮主题，默认灰色
         buttonText: '未获取认证',  // 按钮文本，默认显示“未获取认证”
@@ -55,14 +57,20 @@ Page({
 
     handleChange1(e) {
         this.setData({ led_on_off: e.detail.value });
-        this.setCommand();
     },
+
     handleChange2(e) {
+        this.setData({ ble_on_off: e.detail.value });
+    },
+    handleChange3(e) {
         this.setData({ collapse_val: e.detail.value });
     },
     // 获取 token 并认证成功后进行判断
     handleButton1() {
         this.getToken();
+    },
+    handleButton2() {
+        this.setCommand();
     },
     handleCell1() {
         wx.showToast({ title: '检查网关连接情况，尽量保持wifi通畅', icon: 'none', duration: 1000 });
@@ -136,13 +144,16 @@ Page({
                 if (status === "ONLINE") {
                     this.setData({
                         mqtt_on_off_line: true,
-                        mqtt_state: '连接到云'
+                        mqttStatus: '连接到云'
                     });
                     // wx.showToast({ title: '设备在线', icon: 'success', duration: 1500 });
                 } else {
                     this.setData({
                         mqtt_on_off_line: false,
-                        mqtt_state: '未连接到云'
+                        mqttStatus: '未连接到云',
+                        ble_on_off_line: false,
+                        //有一种情况就是mqtt断开连接的时候，ble是连接状态的，此时最后一次影子状态是true，
+                        //但根据实际情况来说，网关设备断电之后无法上传自己与节点设备的连接情况，因此设置为false才是符合实际的
                     });
                     //wx.showToast({ title: '设备不在线，仅显示设备离线前最后一次数据', icon: 'none', duration: 2000 });
                     //this.getShadow(); // 获取一次影子，作为上次在线数据 
@@ -173,7 +184,7 @@ Page({
                     humidity: props.humidity || 0,
                     led_state: props.led || false,
                     ble: props.ble || [],
-                    ble_state: (props.ble[0] === "true")
+                    bleStatus: (props.ble[0] === "true")
                         ? `在线 (${props.ble[1]})`
                         : '离线',
                     ble_on_off_line: (props.ble[0] === "true")
@@ -197,7 +208,10 @@ Page({
             data: JSON.stringify({
                 service_id: this.data.serviceId,
                 command_name: this.data.commandName,
-                paras: { led_on_off: this.data.led_on_off }
+                paras: {
+                    led_on_off: this.data.led_on_off,
+                    ble_on_off: this.data.ble_on_off
+                }
             }),
             header: {
                 'content-type': 'application/json',
@@ -207,7 +221,7 @@ Page({
                 if (res.statusCode === 403 && res.data?.error_code === "IOTDA.014016") {
                     wx.showToast({ title: '设备不在线', icon: 'none', duration: 2000 });
                     return;
-                }
+                };
                 wx.showToast({ title: '命令下发成功', icon: 'success', duration: 1000 });
             },
             fail() {

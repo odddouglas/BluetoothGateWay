@@ -40,11 +40,12 @@ BLECharacteristic *pCharacteristic;
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E" // 接收特征UUID
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E" // 发送特征UUID
 
-boolean doScan = true;       // 是否开始扫描设备
-boolean doConnect = false;   // 是否连接设备
-boolean isConnected = false; // 设备是否已连接
-boolean doSend = false;      // 是否发送命令
-
+bool doScan = true;                                         // 是否开始扫描设备
+bool doConnect = false;                                     // 是否连接设备
+bool isConnected = false;                                   // 设备是否已连接
+bool doSend = false;                                        // 是否发送命令
+bool led_on_off = false;                                    //
+bool ble_on_off = true;                                     //
 BLEAdvertisedDevice *pServer = nullptr;                     // 存储找到的设备
 BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;   // 存储远程读取特征
 BLERemoteCharacteristic *pRemoteCharacteristic_2 = nullptr; // 存储远程写入特征
@@ -199,9 +200,10 @@ void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
 
     if (commandName == "ctrl") // 判断是否为控制命令
     {
-        bool state = doc["paras"]["led_on_off"]; // 读取参数：LED 开关布尔值
-        cmd = (state ? "ON" : "OFF");            // 更新命令
-        MQTT_Respond(String(topic), "success");  // 回复命令成功
+        ble_on_off = doc["paras"]["ble_on_off"];   // 读取参数：BLE 开关布尔值
+        led_on_off = doc["paras"]["led_on_off"];   // 读取参数：LED 开关布尔值
+        cmd = (led_on_off ? "LED_ON" : "LED_OFF"); // 更新命令
+        MQTT_Respond(String(topic), "success");    // 回复命令成功
         doSend = true;
     }
     else

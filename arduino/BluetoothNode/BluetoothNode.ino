@@ -46,11 +46,11 @@ class BLE_Characteristic_RX_Callbacks : public BLECharacteristicCallbacks
             Serial.println();
 
             // 根据接收到的命令控制LED
-            if (rxValue.find("ON") != -1)
+            if (rxValue.find("LED_ON") != -1)
             {
                 led_state = true; // 点亮LED
             }
-            else if (rxValue.find("OFF") != -1)
+            else if (rxValue.find("LED_OFF") != -1)
             {
                 led_state = false; // 熄灭LED
             }
