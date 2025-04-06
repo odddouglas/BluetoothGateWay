@@ -10,8 +10,8 @@ Page({
 
         led_on_off: false,
         isRealTime: false, // 是否为实时数据
-        mqtt_state: '设备状态: 未连接', // mqtt连接状态
-        ble_state: '设备状态: 未连接', // ble连接状态
+        mqtt_state: '未连接到云', // mqtt连接状态
+        ble_state: '离线', // ble连接状态
 
         buttonTheme: 'default',  // 按钮主题，默认灰色
         buttonText: '未获取认证',  // 按钮文本，默认显示“未获取认证”
@@ -37,7 +37,10 @@ Page({
     },
     onShow() {
         console.log("页面 onShow");
-        this.checkDeviceStatus();
+        // 启动定时检查设备状态
+        this.timer = setInterval(() => {
+            this.checkDeviceStatus();
+        }, 5000); // 每5秒检查一次设备状态
     },
     onHide() {
         clearInterval(this.timer);
@@ -126,11 +129,11 @@ Page({
                 if (status === "ONLINE") {
                     this.setData({
                         isRealTime: true,
-                        mqtt_state: '设备状态: 在线'
+                        mqtt_state: '连接到云'
                     });
                     wx.showToast({ title: '设备在线', icon: 'success', duration: 1500 });
 
-                    // 启动定时获取影子
+                    // 启动定时获取影子，不再进行检查设备在线情况，因此清理掉先前的定时器
                     clearInterval(this.timer);
                     this.timer = setInterval(() => {
                         this.getShadow();
@@ -138,10 +141,10 @@ Page({
                 } else {
                     this.setData({
                         isRealTime: false,
-                        mqtt_state: '设备状态: 离线'
+                        mqtt_state: '未连接到云'
                     });
                     wx.showToast({ title: '设备不在线，仅显示设备离线前最后一次数据', icon: 'none', duration: 2000 });
-                    this.getShadow(); // 获取一次影子，作为上次在线数据
+                    //this.getShadow(); // 获取一次影子，作为上次在线数据
                 }
             },
             fail() {
@@ -170,8 +173,8 @@ Page({
                     led_state: props.led || false,
                     ble: props.ble || [],
                     ble_state: (props.ble[0] === "true")
-                        ? `设备状态: 已连接 (${props.ble[1] || 'BLE设备'})`
-                        : '设备状态: 未连接'
+                        ? `在线 (${props.ble[1]})`
+                        : '离线'
                 });
             }
         });

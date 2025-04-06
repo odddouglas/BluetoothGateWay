@@ -20,8 +20,9 @@
 <view class="wrapper">
     <t-collapse value="{{collapse_val}}" bind:change="handleChange2">
         <t-collapse-panel header="连接说明" value="{{0}}" expandIcon>
-            设备与平台之间的连接断开1分钟后(数据自动刷新周期为1分钟)置为“离线”状态.
-            在线可以实时显示(网关设备上电),但是离线需要等待一分钟(网关设备断电)
+            <view>- 网关设备与平台之间的连接断开1分钟后(数据自动刷新周期为1分钟)置为“离线”状态。</view>
+            <view>- 网关在线可以实时显示(网关设备上电)，但是离线需要等待一分钟(网关设备断电)。</view>
+            <view>- 节点在线离线均可以实时显示(节点设备上电断电)，但是要确保网关设备一直连接云平台。</view>
         </t-collapse-panel>
     </t-collapse>
 </view>
