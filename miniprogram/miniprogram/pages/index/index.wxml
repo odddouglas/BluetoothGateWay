@@ -10,8 +10,8 @@
     <t-switch bindchange="handleChange1" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
 </t-cell>
 <t-divider content="设备连接情况" />
-<t-cell title="网关" hover note="{{mqtt_state}}" arrow />
-<t-cell title="节点" hover note="{{ble_state}}" arrow />
+<t-cell bindtap="handleCell1" title="网关" hover note="{{mqtt_state}}" arrow />
+<t-cell bindtap="handleCell2" title="节点" hover note="{{ble_state}}" arrow />
 <view class="button-example">
     <t-button bindtap="handleButton1" theme="{{buttonTheme}}" block size="large" t-class="group-btn">
         {{buttonText}}
@@ -23,6 +23,7 @@
             <view>- 网关设备与平台之间的连接断开1分钟后(数据自动刷新周期为1分钟)置为“离线”状态。</view>
             <view>- 网关在线可以实时显示(网关设备上电)，但是离线需要等待一分钟(网关设备断电)。</view>
             <view>- 节点在线离线均可以实时显示(节点设备上电断电)，但是要确保网关设备一直连接云平台。</view>
+            <view>- 设备不在线时，仅可显示设备离线前最后一次数据</view>
         </t-collapse-panel>
     </t-collapse>
 </view>

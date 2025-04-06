@@ -9,8 +9,9 @@ Page({
         ble: [0],
 
         led_on_off: false,
-        isRealTime: false, // 是否为实时数据
+        mqtt_on_off_line: false, // 是否为实时数据
         mqtt_state: '未连接到云', // mqtt连接状态
+        ble_on_off_line: false,
         ble_state: '离线', // ble连接状态
 
         buttonTheme: 'default',  // 按钮主题，默认灰色
@@ -39,7 +40,10 @@ Page({
         console.log("页面 onShow");
         // 启动定时检查设备状态
         this.timer = setInterval(() => {
-            this.checkDeviceStatus();
+            this.checkMQTTStatus();
+            if (this.data.mqtt_on_off_line) {
+                this.getShadow();
+            }
         }, 5000); // 每5秒检查一次设备状态
     },
     onHide() {
@@ -60,7 +64,12 @@ Page({
     handleButton1() {
         this.getToken();
     },
-
+    handleCell1() {
+        wx.showToast({ title: '检查网关连接情况，尽量保持wifi通畅', icon: 'none', duration: 1000 });
+    },
+    handleCell2() {
+        wx.showToast({ title: '检查节点是否上电', icon: 'none', duration: 1000 });
+    },
     getToken() {
         const token = wx.getStorageSync('token');
         if (token) {
@@ -100,8 +109,6 @@ Page({
                     buttonTheme: 'primary',  // 按钮变蓝
                     buttonText: '认证成功',  // 显示认证成功文本
                 });
-                // 获取设备在线状态
-                this.checkDeviceStatus();
             },
             fail() {
                 wx.showToast({ title: '认证失败', icon: 'none', duration: 2000 });
@@ -113,7 +120,7 @@ Page({
     },
 
     // 检查设备是否在线
-    checkDeviceStatus() {
+    checkMQTTStatus() {
         const token = wx.getStorageSync('token');
         if (!token) return;
         wx.request({
@@ -128,23 +135,17 @@ Page({
                 console.log("设备状态:", status);
                 if (status === "ONLINE") {
                     this.setData({
-                        isRealTime: true,
+                        mqtt_on_off_line: true,
                         mqtt_state: '连接到云'
                     });
-                    wx.showToast({ title: '设备在线', icon: 'success', duration: 1500 });
-
-                    // 启动定时获取影子，不再进行检查设备在线情况，因此清理掉先前的定时器
-                    clearInterval(this.timer);
-                    this.timer = setInterval(() => {
-                        this.getShadow();
-                    }, 500);
+                    // wx.showToast({ title: '设备在线', icon: 'success', duration: 1500 });
                 } else {
                     this.setData({
-                        isRealTime: false,
+                        mqtt_on_off_line: false,
                         mqtt_state: '未连接到云'
                     });
-                    wx.showToast({ title: '设备不在线，仅显示设备离线前最后一次数据', icon: 'none', duration: 2000 });
-                    //this.getShadow(); // 获取一次影子，作为上次在线数据
+                    //wx.showToast({ title: '设备不在线，仅显示设备离线前最后一次数据', icon: 'none', duration: 2000 });
+                    //this.getShadow(); // 获取一次影子，作为上次在线数据 
                 }
             },
             fail() {
@@ -174,7 +175,10 @@ Page({
                     ble: props.ble || [],
                     ble_state: (props.ble[0] === "true")
                         ? `在线 (${props.ble[1]})`
-                        : '离线'
+                        : '离线',
+                    ble_on_off_line: (props.ble[0] === "true")
+                        ? true
+                        : false
                 });
             }
         });
