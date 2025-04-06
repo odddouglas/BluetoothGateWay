@@ -111,9 +111,9 @@ void BLE_Init()
 
     BLEScan *pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new BLE_MyAdvertisedDeviceCallbacks()); // 设置设备扫描回调
-    pBLEScan->setActiveScan(true);                                                  // 开启主动扫描
-    pBLEScan->setInterval(100);                                                     // 扫描间隔
-    pBLEScan->setWindow(80);                                                        // 扫描窗口
+    pBLEScan->setActiveScan(true);                                                 // 开启主动扫描
+    pBLEScan->setInterval(100);                                                    // 扫描间隔
+    pBLEScan->setWindow(80);                                                       // 扫描窗口
 }
 
 void BLE_Scan()
