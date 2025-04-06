@@ -44,7 +44,7 @@ Page({
             if (this.data.mqtt_on_off_line) {
                 this.getShadow();
             }
-        }, 5000); // 每5秒检查一次设备状态
+        }, 3000); // 每5秒检查一次设备状态
     },
     onHide() {
         clearInterval(this.timer);
