@@ -5,8 +5,8 @@ Page({
         // 设备属性
         temperature: 0.0,
         humidity: 0.0,
-        led_state: true,
-        led_on_off: true,
+        led_state: false,
+        led_on_off: false,
         isRealTime: false, // 是否为实时数据
         connectionStatus: '设备状态: 未连接', // 连接状态
         buttonTheme: 'default',  // 按钮主题，默认灰色
@@ -159,10 +159,11 @@ Page({
             },
             success: (res) => {
                 const props = res.data.shadow[0]?.reported?.properties || {};
+                console.log(props); //打印数据
                 this.setData({
                     temperature: props.temperature || 0,
                     humidity: props.humidity || 0,
-                    led_state: props.led || false
+                    led_state: props.led || false,
                 });
             }
         });

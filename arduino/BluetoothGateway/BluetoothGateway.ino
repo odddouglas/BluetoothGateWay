@@ -29,6 +29,7 @@ const char *mqttPassword = "106025bd4390a90b15da1f4aa5c4da6eabc5751bb4efcc166094
 // 设备订阅命令的 topic
 #define MQTT_TOPIC_COMMAND "$oc/devices/" DEVICE_ID "/sys/commands/#"
 #define MQTT_TOPIC_COMMAND_RESPOND "$oc/devices/" DEVICE_ID "/sys/commands/response/request_id="
+// 设备消息上报的 topic //用不上
 #define MQTT_TOPIC_MESSAGE_UP "$oc/devices/" DEVICE_ID "/sys/messages/up"
 
 // 蓝牙相关定义
@@ -316,8 +317,8 @@ void MQTT_Report()
 void MQTT_Send()
 {
     StaticJsonDocument<200> doc;
-    doc["content"]["status"] = isConnected;   // 连接状态 (connected / disconnected)
-    doc["content"]["device_name"] = ble_name; // 设备名称
+    doc["content"]["ble_status"] = isConnected; // 连接状态 (connected / disconnected)
+    doc["content"]["device_name"] = ble_name;   // 设备名称
 
     String jsonString;
     serializeJson(doc, jsonString); // 转换为 JSON 字符串
@@ -403,6 +404,7 @@ void loop()
     { // 每 10 秒上报一次
         last = now;
         MQTT_Report();
+        // MQTT_Send();
         BLE_Send_CMD(); // 发送命令
     }
 }
