@@ -43,8 +43,7 @@ class BLE_Characteristic_RX_Callbacks : public BLECharacteristicCallbacks
             Serial.print("------> Received Value: ");
             for (int i = 0; i < rxValue.length(); i++)
                 Serial.print(rxValue[i]);
-            Serial.println();
-
+                
             // 根据接收到的命令控制LED
             if (rxValue.find("LED_ON") != -1)
             {

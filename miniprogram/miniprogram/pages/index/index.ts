@@ -2,6 +2,8 @@ Page({
     data: {
         // 说明书面板标志位
         collapse_val: [0],
+        // 多选栏选择属性
+        checkbox_val: [0, 1],
         // 设备属性
         temperature: 0.0,
         humidity: 0.0,
@@ -55,16 +57,35 @@ Page({
         clearInterval(this.timer);
     },
 
-    handleChange1(e) {
-        this.setData({ led_on_off: e.detail.value });
-    },
+    // handleChange1(e) {
+    //     this.setData({ led_on_off: e.detail.value });
+    // },
 
-    handleChange2(e) {
-        this.setData({ ble_on_off: e.detail.value });
-    },
+    // handleChange2(e) {
+    //     this.setData({ ble_on_off: e.detail.value });
+    // },
     handleChange3(e) {
         this.setData({ collapse_val: e.detail.value });
+        console.log(this.data.checkbox_val);
     },
+    handleChange4(e) {
+        const selectedValues = e.detail.value;
+        this.setData({ checkbox_val: selectedValues });
+
+        // 判断选中的项，分别设置 led_on_off 和 ble_on_off
+        const led_on_off = selectedValues.includes(0);  // 如果选中了 index 0，则为 LED 打开
+        const ble_on_off = selectedValues.includes(1);  // 如果选中了 index 1，则为 BLE 打开
+
+        this.setData({
+            led_on_off: led_on_off,
+            ble_on_off: ble_on_off
+        });
+
+        console.log("checkbox_val:", this.data.checkbox_val);
+        console.log("led_on_off:", this.data.led_on_off);
+        console.log("ble_on_off:", this.data.ble_on_off);
+    },
+
     // 获取 token 并认证成功后进行判断
     handleButton1() {
         this.getToken();

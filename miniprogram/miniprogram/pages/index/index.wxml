@@ -15,12 +15,20 @@
     </view>
 </t-cell>
 <t-divider content="控制面板" />
-<t-cell title="LED">
+<!-- <t-cell title="LED">
     <t-switch bindchange="handleChange1" value="{{led_on_off}}" label="{{['开', '关']}}" slot="note" />
 </t-cell>
 <t-cell title="BLE">
     <t-switch bindchange="handleChange2" value="{{ble_on_off}}" label="{{['开', '关']}}" slot="note" />
-</t-cell>
+</t-cell> -->
+<wxs module="_"> module.exports.contain = function(arr, key) { return arr.indexOf(key) > -1 } </wxs>
+<t-checkbox-group t-class="horizontal-box" value="{{checkbox_val}}" bind:change="handleChange4">
+    <view wx:for="{{2}}" wx:key="index" class="card {{_.contain(checkbox_val, index) ? 'card--active' : ''}}">
+        <t-icon wx:if="{{_.contain(checkbox_val, index)}}" name="check" t-class="card__icon" ariaHidden="{{true}}" />
+        <!-- 修改 label 为 "LED" 和 "BLE" -->
+        <t-checkbox value="{{index}}" label="{{index === 0 ? 'LED' : 'BLE'}}" icon="none" borderless />
+    </view>
+</t-checkbox-group>
 <view class="button-example">
     <t-button bindtap="handleButton2" theme="default" block size="large" t-class="group-btn">
         下发命令
