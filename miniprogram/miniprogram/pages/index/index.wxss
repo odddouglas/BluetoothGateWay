@@ -30,6 +30,7 @@
 }
 
 
+
 .card {
     position: relative;
     margin: 32rpx;
@@ -37,13 +38,8 @@
     overflow: hidden;
     box-sizing: border-box;
     border: 3rpx solid var(--td-bg-color-container, #fff);
-    display: flex;
-    justify-content: center;
     align-items: center;
     text-align: center;
-    width: 100%;
-    height: 100%;
-    z-index: 10;
 }
 
 .card--active {
@@ -74,6 +70,7 @@
     z-index: 1;
 }
 
+/* 横向布局 */
 .horizontal-box {
     display: flex;
     align-items: center;
@@ -83,8 +80,10 @@
 }
 
 .horizontal-box .card {
-    flex: 0 0 calc(50% - 16rpx);
-    margin: 0 8rpx 24rpx 8rpx;
+    flex: 0 0 calc(50% - 12rpx);
+    /* 修改为 50% 宽度 */
+    margin: 0 0 24rpx 0;
+    /* 底部间距 */
 }
 
 .horizontal-box .card::after {
@@ -93,19 +92,4 @@
 
 .horizontal-box .card__icon {
     font-size: 24rpx;
-}
-
-.checkbox-content {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    width: 100%;
-    height: 100%;
-}
-
-t-checkbox {
-    display: block;
-    width: 100%;
-    height: 100%;
 }
