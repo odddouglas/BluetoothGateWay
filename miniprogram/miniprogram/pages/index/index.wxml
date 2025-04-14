@@ -11,7 +11,7 @@
 </t-cell>
 <t-cell title="LED" arrow>
     <view slot="note" class="cell-note-bold">
-        {{mqtt_on_off_line&&ble_on_off_line  ? led_state : 'outofdate'}}
+        {{mqtt_on_off_line&&ble_on_off_line  ? led : 'outofdate'}}
     </view>
 </t-cell>
 <t-divider content="控制面板" />
@@ -21,12 +21,14 @@
 <t-cell title="BLE">
     <t-switch bindchange="handleChange2" value="{{ble_on_off}}" label="{{['开', '关']}}" slot="note" />
 </t-cell> -->
-<wxs module="_"> module.exports.contain = function(arr, key) { return arr.indexOf(key) > -1 } </wxs>
+<wxs module="_">
+module.exports.contain = function(arr, key) {return arr.indexOf(key) > -1};
+module.exports.getLabel = function(index) {return "LED" + (index + 1);};
+</wxs>
 <t-checkbox-group t-class="horizontal-box" value="{{checkbox_val}}" bind:change="handleChange4">
-    <view wx:for="{{2}}" wx:key="index" class="card {{_.contain(checkbox_val, index) ? 'card--active' : ''}}">
+    <view wx:for="{{4}}" wx:key="index" class="card {{_.contain(checkbox_val, index) ? 'card--active' : ''}}">
         <t-icon wx:if="{{_.contain(checkbox_val, index)}}" name="check" t-class="card__icon" ariaHidden="{{true}}" />
-        <!-- 修改 label 为 "LED" 和 "BLE" -->
-        <t-checkbox value="{{index}}" label="{{index === 0 ? 'LED' : 'BLE'}}" icon="none" borderless />
+        <t-checkbox value="{{index}}" label="{{_.getLabel(index)}}" icon="none" borderless />
     </view>
 </t-checkbox-group>
 <view class="button-example">

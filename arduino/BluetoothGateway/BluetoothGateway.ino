@@ -40,23 +40,23 @@ BLECharacteristic *pCharacteristic;
 #define CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E" // 接收特征UUID
 #define CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E" // 发送特征UUID
 
-bool doScan = true;                                         // 是否开始扫描设备
-bool doConnect = false;                                     // 是否连接设备
-bool isConnected = false;                                   // 设备是否已连接
-bool doSend = false;                                        // 是否发送命令
-bool led_on_off = false;                                    //
-bool ble_on_off = true;                                     //
-BLEAdvertisedDevice *pServer = nullptr;                     // 存储找到的设备
-BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;   // 存储远程读取特征
-BLERemoteCharacteristic *pRemoteCharacteristic_2 = nullptr; // 存储远程写入特征
-BLEClient *pClient = nullptr;                               // 客户端实例
+bool doScan = true;                                          // 是否开始扫描设备
+bool doConnect = false;                                      // 是否连接设备
+bool isConnected = false;                                    // 设备是否已连接
+bool doSend = false;                                         // 是否发送命令
+String led_on_off[4] = {"false", "false", "false", "false"}; // 命令暂存
+bool ble_on_off = true;                                      // 命令暂存
+BLEAdvertisedDevice *pServer = nullptr;                      // 存储找到的设备
+BLERemoteCharacteristic *pRemoteCharacteristic = nullptr;    // 存储远程读取特征
+BLERemoteCharacteristic *pRemoteCharacteristic_2 = nullptr;  // 存储远程写入特征
+BLEClient *pClient = nullptr;                                // 客户端实例
 
 float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
-bool led_state = false; // LED 状态变量
-String ble_name = "";   // 已连接的蓝牙名称
-String cmd = "";        // 收发的命令
-long last = 0;          // 用于定时发报
+String led_state[4] = {"false", "false", "false", "false"}; // 连接之后的led状态
+String ble_name = "";                                       // 已连接的蓝牙名称
+String cmd = "";                                            // 收发的命令
+long last = 0;                                              // 用于定时发报
 
 void WIFI_Init()
 {
@@ -121,7 +121,14 @@ void MQTT_Report()
     doc["services"][0]["service_id"] = SERVER_ID;
     doc["services"][0]["properties"]["temperature"] = data_temp;
     doc["services"][0]["properties"]["humidity"] = data_humi;
-    doc["services"][0]["properties"]["led"] = led_state ? "true" : "false";
+    // 删除旧的布尔上传
+    // doc["services"][0]["properties"]["led"] = led_state ? "true" : "false";
+    // 新增 stringlist led 上传
+    JsonArray ledArray = doc["services"][0]["properties"].createNestedArray("led");
+    for (int i = 0; i < 4; i++)
+    {
+        ledArray.add(led_state[i]);
+    }
     // 添加 ble stringlist 属性
     JsonArray bleArray = doc["services"][0]["properties"].createNestedArray("ble");
     bleArray.add(isConnected ? "true" : "false");
@@ -200,17 +207,44 @@ void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
 
     if (commandName == "ctrl") // 判断是否为控制命令
     {
-        ble_on_off = doc["paras"]["ble_on_off"];   // 读取参数：BLE 开关布尔值
-        led_on_off = doc["paras"]["led_on_off"];   // 读取参数：LED 开关布尔值
-        cmd = (led_on_off ? "LED_ON" : "LED_OFF"); // 更新命令
-        MQTT_Respond(String(topic), "success");    // 回复命令成功
-        doSend = true;
+        // 读取参数：BLE 开关布尔值
+        ble_on_off = doc["paras"]["ble_on_off"].as<bool>();
+
+        // 读取参数：LED 开关布尔值（作为数组处理）
+        if (doc["paras"].containsKey("led_on_off"))
+        {
+            JsonArray ledArray = doc["paras"]["led_on_off"].as<JsonArray>();
+            // 清空原有数据
+            for (int i = 0; i < 4; i++)
+            {
+                led_on_off[i] = "false"; // 将所有元素重置为空
+            }
+
+            // 遍历数组并存储每个值
+            for (int i = 0; i < ledArray.size(); i++)
+            {
+                if (i < 4) // 确保不越界
+                {
+                    led_on_off[i] = ledArray[i].as<String>(); // 直接赋值
+                }
+            }
+        }
+
+        // 构造 4 位 01 字符串命令
+        cmd = "";
+        for (int i = 0; i < 4; i++)
+        {
+            cmd += (led_on_off[i] == "true") ? "1" : "0";
+        }
+        MQTT_Respond(String(topic), "success"); // 回复命令成功
+        doSend = true;                          // 标记需要发送数据
     }
     else
     {
         MQTT_Respond(String(topic), "failure"); // 命令无效，回复失败
     }
 }
+
 // 搜索BLE设备回调
 class BLE_MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
@@ -370,13 +404,9 @@ void BLE_Send_CMD()
 // BLE收到客户端推送的数据时的回调函数
 void BLE_NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8_t *pData, size_t length, bool isNotify)
 {
-    // 创建 StaticJsonDocument 对象
     StaticJsonDocument<200> doc;
-
-    // 尝试将接收到的数据解析为 JSON 格式
     DeserializationError error = deserializeJson(doc, pData, length);
 
-    // 如果解析失败，输出错误信息
     if (error)
     {
         Serial.print("解析JSON失败: ");
@@ -384,14 +414,26 @@ void BLE_NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8
         return;
     }
 
-    // 从 JSON 中提取各个字段
-    led_state = doc["led"];         // LED 状态（布尔值）
-    data_temp = doc["temperature"]; // 温度
-    data_humi = doc["humidity"];    // 湿度
+    // 解析 LED 状态为字符串数组
+    JsonArray ledArray = doc["led"].as<JsonArray>();
+    for (int i = 0; i < 4 && i < ledArray.size(); i++)
+    {
+        led_state[i] = ledArray[i].as<const char *>();
+    }
 
-    // 打印解析结果
-    Serial.printf("接收到数据:\nLED: %s\n温度: %.2f °C\n湿度: %.2f %%\n", led_state ? "on" : "off", data_temp, data_humi);
+    // 解析温湿度
+    data_temp = doc["temperature"];
+    data_humi = doc["humidity"];
+
+    // 打印 LED 状态
+    Serial.print("接收到数据:\nLED状态: ");
+    for (int i = 0; i < 4; i++)
+    {
+        Serial.printf("[%d]=%s ", i, led_state[i].c_str());
+    }
+    Serial.printf("\n温度: %.2f °C\n湿度: %.2f %%\n", data_temp, data_humi);
 }
+
 void setup()
 {
     Serial.begin(115200);

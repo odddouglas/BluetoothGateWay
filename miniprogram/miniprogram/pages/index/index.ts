@@ -7,10 +7,10 @@ Page({
         // 设备属性
         temperature: 0.0,
         humidity: 0.0,
-        led_state: false,
+        led: [0],
         ble: [0],
 
-        led_on_off: false,
+        led_on_off: ["false", "false", "false", "false"],
         ble_on_off: true,
 
         mqtt_on_off_line: false, // 是否为实时数据
@@ -69,22 +69,22 @@ Page({
         console.log(this.data.checkbox_val);
     },
     handleChange4(e) {
-        const selectedValues = e.detail.value;
+        const selectedValues = e.detail.value; // 选中的 checkbox index
         this.setData({ checkbox_val: selectedValues });
 
-        // 判断选中的项，分别设置 led_on_off 和 ble_on_off
-        const led_on_off = selectedValues.includes(0);  // 如果选中了 index 0，则为 LED 打开
-        const ble_on_off = selectedValues.includes(1);  // 如果选中了 index 1，则为 BLE 打开
+        // 生成 led_on_off 状态（stringlist），共 4 位
+        const led_on_off = [0, 1, 2, 3].map(i =>
+            selectedValues.includes(i) ? "true" : "false"
+        );
 
         this.setData({
-            led_on_off: led_on_off,
-            ble_on_off: ble_on_off
+            led_on_off: led_on_off
         });
 
         console.log("checkbox_val:", this.data.checkbox_val);
         console.log("led_on_off:", this.data.led_on_off);
-        console.log("ble_on_off:", this.data.ble_on_off);
     },
+
 
     // 获取 token 并认证成功后进行判断
     handleButton1() {
@@ -203,7 +203,7 @@ Page({
                 this.setData({
                     temperature: props.temperature || 0,
                     humidity: props.humidity || 0,
-                    led_state: props.led || false,
+                    led: props.led || [],
                     ble: props.ble || [],
                     bleStatus: (props.ble[0] === "true")
                         ? `在线 (${props.ble[1]})`

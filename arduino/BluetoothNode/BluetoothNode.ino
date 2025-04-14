@@ -17,7 +17,7 @@ bool isConnected = false; // 是否蓝牙连接
 
 float data_temp = 0.0; // 温湿度数据变量
 float data_humi = 0.0;
-bool led_state = false; // LED 状态变量
+bool led_state[4] = {false, false, false, false};
 
 BLECharacteristic *pCharacteristic;
 
@@ -43,15 +43,29 @@ class BLE_Characteristic_RX_Callbacks : public BLECharacteristicCallbacks
             Serial.print("------> Received Value: ");
             for (int i = 0; i < rxValue.length(); i++)
                 Serial.print(rxValue[i]);
-                
-            // 根据接收到的命令控制LED
-            if (rxValue.find("LED_ON") != -1)
+
+            // 确保接收到的命令是四位字符
+            if (rxValue.length() == 4)
             {
-                led_state = true; // 点亮LED
-            }
-            else if (rxValue.find("LED_OFF") != -1)
-            {
-                led_state = false; // 熄灭LED
+                // 解析命令并设置LED状态
+                for (int i = 0; i < 4; i++)
+                {
+                    if (rxValue[i] == '1')
+                    {
+                        led_state[i] = true;
+                        ; // 点亮对应的LED
+                    }
+                    else if (rxValue[i] == '0')
+                    {
+                        led_state[i] = false; // 熄灭对应的LED
+                    }
+                }
+
+                // 打印每个LED的状态
+                for (int i = 0; i < 4; i++)
+                {
+                    Serial.printf("LED %d is %s\n", i + 1, led_state[i] ? "ON" : "OFF");
+                }
             }
         }
     }
@@ -87,10 +101,17 @@ void BLE_SendData()
 {
     if (isConnected)
     {
+
         StaticJsonDocument<200> doc;
         doc["temperature"] = data_temp;
         doc["humidity"] = data_humi;
-        doc["led"] = led_state; // 使用led_state来控制LED状态
+
+        // 转换 bool 数组为 StringList
+        JsonArray ledArray = doc.createNestedArray("led");
+        for (int i = 0; i < 4; i++)
+        {
+            ledArray.add(led_state[i] ? "true" : "false");
+        }
 
         String jsonString;
         serializeJson(doc, jsonString);
@@ -126,6 +147,9 @@ void setup()
     Serial.begin(115200);
 
     pinMode(12, OUTPUT);
+    pinMode(13, OUTPUT);
+    pinMode(18, OUTPUT);
+    pinMode(19, OUTPUT);
     dht.begin();
     delay(2000); // DHT传感器的稳定时间
     BLE_Init();  // 初始化BLE
@@ -136,7 +160,10 @@ void loop()
     DHT_Read();     // 读取DHT传感器
     BLE_SendData(); // 发送数据
 
-    digitalWrite(12, led_state); // 点亮LED
+    digitalWrite(12, led_state[0]); // 点亮LED
+    digitalWrite(13, led_state[1]); // 点亮LED
+    digitalWrite(18, led_state[2]); // 点亮LED
+    digitalWrite(19, led_state[3]); // 点亮LED
 
     delay(1000); // 延迟
 }
