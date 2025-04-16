@@ -29,7 +29,8 @@ Page({
         // shadowUrl: 'https://iotda.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/shadow',
         // commandUrl: 'https://iotda.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/commands',
         // deviceUrl: 'https://iotda.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32',
-        projectId: 'cn-north-4',
+        projectName: 'cn-north-4',
+        projectId: '5631b5e6a3a34c86bc2e1cbd09ae9fc9',
         deviceId: '67ed58015367f573f77ef961_esp32',
         serviceId: 'gateway_data',
         commandName: 'ctrl',
@@ -131,7 +132,7 @@ Page({
                     },
                     scope: {
                         domain: {},
-                        project: { name: this.data.projectId }
+                        project: { name: this.data.projectName }
                     }
                 }
             }),
