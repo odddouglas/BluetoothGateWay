@@ -22,10 +22,13 @@ Page({
         buttonText: '未获取认证',  // 按钮文本，默认显示“未获取认证”
         // URL 配置
         tokenUrl: 'https://iam.cn-north-4.myhuaweicloud.com/v3/auth/tokens',
-        shadowUrl: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/shadow',
-        commandUrl: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/commands',
-        deviceUrl: 'https://ed6cc26730.st1.iotda-app.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32',
+        shadowUrl: 'https://e5e7404266.st1.iotda-app.cn-north-4.myhuaweicloud.com:443/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/shadow',
+        commandUrl: 'https://e5e7404266.st1.iotda-app.cn-north-4.myhuaweicloud.com:443/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/commands',
+        deviceUrl: 'https://e5e7404266.st1.iotda-app.cn-north-4.myhuaweicloud.com:443/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32',
 
+        // shadowUrl: 'https://iotda.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/shadow',
+        // commandUrl: 'https://iotda.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32/commands',
+        // deviceUrl: 'https://iotda.cn-north-4.myhuaweicloud.com/v5/iot/5631b5e6a3a34c86bc2e1cbd09ae9fc9/devices/67ed58015367f573f77ef961_esp32',
         projectId: 'cn-north-4',
         deviceId: '67ed58015367f573f77ef961_esp32',
         serviceId: 'gateway_data',
@@ -33,12 +36,14 @@ Page({
 
         authDomain: "odddouglas",
         authUser: "iota",
-        authPassword: "qgddgls1128"
+        authPassword: "qgddgls1128",
+        currentToken: null // 新增字段存储当前token
     },
 
     onLoad() {
         console.log("页面 onLoad");
         this.getToken();
+        //console.log(wx.getStorageSync('token'));
     },
     onShow() {
         console.log("页面 onShow");
@@ -100,15 +105,15 @@ Page({
         wx.showToast({ title: '检查节点是否上电', icon: 'none', duration: 1000 });
     },
     getToken() {
-        const token = wx.getStorageSync('token');
-        if (token) {
-            this.setData({
-                buttonTheme: 'primary',  // 按钮变蓝
-                buttonText: '认证成功',  // 显示认证成功文本
-            });
-            wx.showToast({ title: '已经完成认证，无需程重复验证', icon: 'none', duration: 2000 });
-            return;
-        } //如果有了就无需重复获取，区别于其他需要token的函数
+        //const token = wx.getStorageSync('token');
+        // if (token) {
+        //     this.setData({
+        //         buttonTheme: 'primary',  // 按钮变蓝
+        //         buttonText: '认证成功',  // 显示认证成功文本
+        //     });
+        //     wx.showToast({ title: '已经完成认证，无需程重复验证', icon: 'none', duration: 2000 });
+        //     return;
+        // } //如果有了就无需重复获取，区别于其他需要token的函数
         wx.request({
             url: this.data.tokenUrl,
             method: 'POST',
@@ -133,10 +138,12 @@ Page({
             header: { 'Content-Type': 'application/json' },
             success: (res) => {
                 const token = res.header['X-Subject-Token'];
-                wx.setStorageSync('token', token);
+                console.log(token);
+                //wx.setStorageSync('token', token);
                 this.setData({
                     buttonTheme: 'primary',  // 按钮变蓝
                     buttonText: '认证成功',  // 显示认证成功文本
+                    currentToken: token  // 将token存储在data中而不是缓存
                 });
             },
             fail() {
@@ -150,7 +157,8 @@ Page({
 
     // 检查设备是否在线
     checkMQTTStatus() {
-        const token = wx.getStorageSync('token');
+        //const token = wx.getStorageSync('token');
+        const token = this.data.currentToken; // 改为从data中获取
         if (!token) return;
         wx.request({
             url: this.data.deviceUrl,
@@ -187,7 +195,8 @@ Page({
     },
 
     getShadow() {
-        const token = wx.getStorageSync('token');
+        //const token = wx.getStorageSync('token');
+        const token = this.data.currentToken; // 改为从data中获取
         if (!token) return;
 
         wx.request({
@@ -217,7 +226,8 @@ Page({
     },
 
     setCommand() {
-        const token = wx.getStorageSync('token');
+        //const token = wx.getStorageSync('token');
+        const token = this.data.currentToken; // 改为从data中获取
         if (!token) {
             wx.showToast({ title: '请先获取认证', icon: 'none', duration: 2000 });
             return;
