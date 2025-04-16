@@ -61,14 +61,14 @@ long last = 0;                                              // 用于定时发�
 void WIFI_Init()
 {
     WiFi.begin(ssid, password);
-    Serial.print("Connecting to WiFi");
+    Serial.print("WIFI：正在连接 Connecting to WiFi");
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
         Serial.print(".");
     }
     Serial.println();
-    Serial.println("WiFi connected");
+    Serial.println("WIFI: 成功连接 WiFi connected");
     Serial.println(WiFi.localIP());
 }
 
@@ -78,18 +78,18 @@ void MQTT_Init()
     client.setKeepAlive(60);
     client.setCallback(MQTT_CmdCallback); // 设置命令回调函数
 
-    Serial.println("[MQTT] Connecting to Huawei Cloud...");
+    Serial.println("[MQTT] 正在尝试连接 Connecting to Huawei Cloud...");
 
     while (!client.connected())
     {
         boolean result = client.connect(ClientId, mqttUser, mqttPassword);
 
-        Serial.println(result ? "[MQTT] Connected to Broker!" : "[MQTT] Connection Failed!");
+        Serial.println(result ? "[MQTT] 成功连接 Connected to Broker!" : "[MQTT] 连接失败 Connection Failed!");
         if (result)
         {
             // 订阅命令下发 Topic
             boolean subResult = client.subscribe(MQTT_TOPIC_COMMAND);
-            Serial.println("[MQTT] Subscribe to Command Topic:");
+            Serial.println("[MQTT] 订阅平台Topic Subscribe to Command Topic:");
             Serial.println(subResult ? "Subscribe Success!" : "Subscribe Failed!");
         }
         else
@@ -140,7 +140,7 @@ void MQTT_Report()
 
     // 发布到华为云平台
     boolean reportResult = client.publish(MQTT_TOPIC_REPORT, jsonString.c_str());
-    Serial.println("[MQTT] Publish:");
+    Serial.println("[MQTT] 向平台上报属性 Publish:");
     Serial.println(jsonString);
     Serial.println(reportResult ? "Publish Success!" : "Publish Failed!");
 }
@@ -179,7 +179,7 @@ void MQTT_Respond(String topic, String result)
     String responseTopic = MQTT_TOPIC_COMMAND_RESPOND + requestId;
     // 发布命令响应
     boolean respondResult = client.publish(responseTopic.c_str(), jsonBuf);
-    Serial.println("[MQTT] Publish (Command Response):");
+    Serial.println("[MQTT] 向平台发布命令响应 (Command Response):");
     Serial.println(jsonBuf);
     Serial.println(respondResult ? "Publish Success!" : "Publish Failed!");
 }
@@ -192,8 +192,8 @@ void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
     DeserializationError error = deserializeJson(doc, payload, length); // 解析接收到的 JSON 数据
     if (error)
     {
-        Serial.println("Failed to parse JSON"); // 打印解析失败信息
-        return;                                 // 退出处理函数
+        Serial.println("MQTT: 命令解析JSON失败"); // 打印解析失败信息
+        return;                                   // 退出处理函数
     }
 
     String payloadStr = ""; // 用于打印接收到的原始 JSON 字符串
@@ -201,7 +201,7 @@ void MQTT_CmdCallback(char *topic, byte *payload, unsigned int length)
     {
         payloadStr += (char)payload[i]; // 字节流转换为字符串
     }
-    Serial.println("Received command: " + payloadStr); // 打印接收到的命令
+    Serial.println("MQTT: 收到命令---->>> " + payloadStr); // 打印接收到的命令
 
     String commandName = doc["command_name"]; // 获取命令名称字段
 
@@ -257,7 +257,7 @@ public:
             pServer = new BLEAdvertisedDevice(advertisedDevice); // 暂存设备
             doScan = false;
             doConnect = true; // 准备连接
-            Serial.println("发现想要连接的设备");
+            Serial.println("BLE: 发现想要连接的设备");
         }
     }
 };
@@ -270,15 +270,15 @@ public:
     {
         ble_name = pServer->getName().c_str(); // 获取蓝牙名称
         isConnected = true;
-        Serial.println("连接设备成功");
+        Serial.println("BLE: 连接设备成功");
         // 设置MTU大小
         if (pClient->setMTU(512))
         {
-            Serial.println("MTU设置成功.");
+            Serial.println("BLE: MTU设置成功.");
         }
         else
         {
-            Serial.println("MTU设置失败.");
+            Serial.println("BLE: MTU设置失败.");
         }
     }
 
@@ -286,7 +286,7 @@ public:
     {
         isConnected = false;
         doScan = true;
-        Serial.println("失去与设备的连接");
+        Serial.println("BLE: 失去与设备的连接");
 
         if (pClient)
         {
@@ -314,7 +314,7 @@ void BLE_Scan()
     if (doScan)
     {
         MQTT_Report(); // 上传一次，确保更新ble的状态上云
-        Serial.println("开始搜索设备");
+        Serial.println("BLE: 开始搜索设备");
         BLEDevice::getScan()->clearResults(); // 清除上次扫描结果
         BLEDevice::getScan()->start(0);       // 持续搜索设备
     }
@@ -328,7 +328,7 @@ void BLE_Scan()
         }
         else
         {
-            Serial.println("连接设备失败");
+            Serial.println("BLE: 连接设备失败");
             doScan = true; // 重新开始扫描
         }
     doConnect = false; // 完成连接
@@ -340,7 +340,7 @@ bool BLE_Connect()
     pClient = BLEDevice::createClient(); // 创建客户端实例
     if (!pClient)
     {
-        Serial.println("创建客户端失败");
+        Serial.println("BLE: 创建客户端失败");
         return false;
     }
 
@@ -348,7 +348,7 @@ bool BLE_Connect()
 
     if (!pClient->connect(pServer))
     { // 尝试连接设备
-        Serial.println("连接设备失败");
+        Serial.println("BLE: 连接设备失败");
         delete pClient;
         pClient = nullptr;
         return false;
@@ -358,7 +358,7 @@ bool BLE_Connect()
     BLERemoteService *pRemoteService = pClient->getService(SERVICE_UUID);
     if (!pRemoteService)
     {
-        Serial.println("获取服务失败");
+        Serial.println("BLE: 获取服务失败");
         pClient->disconnect();
         return false;
     }
@@ -369,16 +369,16 @@ bool BLE_Connect()
 
     if (!pRemoteCharacteristic || !pRemoteCharacteristic_2)
     {
-        Serial.println("获取特征失败");
+        Serial.println("BLE: 获取特征失败");
         pClient->disconnect();
         return false;
     }
 
-    Serial.println("获取特征成功");
+    Serial.println("BLE: 获取特征成功");
 
     if (pRemoteCharacteristic->canRead())
     {
-        Serial.printf("该特征值可以读取并且当前值为: %s\r\n", pRemoteCharacteristic->readValue().c_str());
+        Serial.printf("BLE: 该特征值可以读取并且当前值为: %s\r\n", pRemoteCharacteristic->readValue().c_str());
     }
 
     if (pRemoteCharacteristic->canNotify())
@@ -395,7 +395,7 @@ void BLE_Send_CMD()
     {
         if (isConnected && pRemoteCharacteristic_2 && pRemoteCharacteristic_2->canWrite())
         {
-            Serial.printf("向特征写入消息: %s\r\n", cmd.c_str());
+            Serial.printf("BLE: 向特征写入消息: %s\r\n,并发送给设备节点 %s\r\n", cmd.c_str(), ble_name);
             pRemoteCharacteristic_2->writeValue(cmd.c_str(), cmd.length()); // 写入数据到设备
             doSend = false;                                                 // 重置 doSend 状态为 false
         }
@@ -409,7 +409,7 @@ void BLE_NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8
 
     if (error)
     {
-        Serial.print("解析JSON失败: ");
+        Serial.printf("BLE: 接收来自设备%s的JSON数据包失败: ", ble_name);
         Serial.println(error.f_str());
         return;
     }
@@ -426,7 +426,7 @@ void BLE_NotifyCallback(BLERemoteCharacteristic *pBLERemoteCharacteristic, uint8
     data_humi = doc["humidity"];
 
     // 打印 LED 状态
-    Serial.print("接收到数据:\nLED状态: ");
+    Serial.printf("BLE: 接收到来自设备%s的数据:\nLED状态: ", ble_name);
     for (int i = 0; i < 4; i++)
     {
         Serial.printf("[%d]=%s ", i, led_state[i].c_str());

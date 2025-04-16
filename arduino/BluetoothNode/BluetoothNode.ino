@@ -37,7 +37,8 @@ class BLE_Characteristic_RX_Callbacks : public BLECharacteristicCallbacks
 {
     void onWrite(BLECharacteristic *pCharacteristic)
     {
-        std::string rxValue = pCharacteristic->getValue();
+        String rxValueString = pCharacteristic->getValue(); // Get as Arduino String
+        std::string rxValue(rxValueString.c_str()); // Convert to std::string
         if (rxValue.length() > 0)
         {
             Serial.print("------> Received Value: ");
